@@ -47,6 +47,9 @@ filings/
 downloads/
 demo_filings/
 
+# Vector database
+vector_db/
+
 # Logs
 *.log
 logs/
