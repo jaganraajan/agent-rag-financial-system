@@ -45,6 +45,7 @@ Thumbs.db
 data/
 filings/
 downloads/
+demo_filings/
 
 # Logs
 *.log
