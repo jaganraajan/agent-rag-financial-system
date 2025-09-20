@@ -22,7 +22,7 @@ def main():
                         help='Years to download filings for (default: 2022 2023 2024)')
     parser.add_argument('--output-dir', default='filings',
                         help='Output directory for downloaded filings (default: filings)')
-    parser.add_argument('--user-agent', default='Financial Analysis Tool 1.0',
+    parser.add_argument('--user-agent', default='Financial Analysis Tool 1.0 (jaganraajan@gmail.com)',
                         help='User agent for SEC requests')
     
     args = parser.parse_args()
