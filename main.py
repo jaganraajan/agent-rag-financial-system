@@ -1,32 +1,34 @@
 #!/usr/bin/env python3
 """
-Main script to run the SEC EDGAR 10-K filing scraper.
+Main script for SEC EDGAR Financial RAG System.
 
-This script downloads 10-K filings for Google (GOOGL), Microsoft (MSFT), 
-and NVIDIA (NVDA) for the years 2022, 2023, and 2024.
+This script supports two modes:
+1. Scraper mode: Downloads 10-K filings from SEC EDGAR
+2. RAG mode: Processes filings and provides query interface
 """
 
 import os
 import sys
 import argparse
+import logging
 from datetime import datetime
 from sec_edgar_scraper import SECEdgarScraper
+from rag_pipeline import RAGPipeline
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Download 10-K filings from SEC EDGAR')
-    parser.add_argument('--companies', nargs='+', default=['GOOGL', 'MSFT', 'NVDA'],
-                        choices=['GOOGL', 'MSFT', 'NVDA'],
-                        help='Company symbols to download (default: all)')
-    parser.add_argument('--years', nargs='+', type=int, default=[2022, 2023, 2024],
-                        help='Years to download filings for (default: 2022 2023 2024)')
-    parser.add_argument('--output-dir', default='filings',
-                        help='Output directory for downloaded filings (default: filings)')
-    parser.add_argument('--user-agent', default='Financial Analysis Tool 1.0 (jaganraajan@gmail.com)',
-                        help='User agent for SEC requests')
-    
-    args = parser.parse_args()
-    
+def setup_logging(level=logging.INFO):
+    """Setup logging configuration."""
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
+
+def run_scraper_mode(args):
+    """Run the SEC filing scraper."""
     print("SEC EDGAR 10-K Filings Scraper")
     print("=" * 40)
     print(f"Companies: {', '.join(args.companies)}")
@@ -81,6 +83,189 @@ def main():
         sys.exit(1)
     except Exception as e:
         print(f"\nError during download: {e}")
+        sys.exit(1)
+
+
+def run_rag_mode(args):
+    """Run the RAG pipeline."""
+    print("SEC EDGAR Financial RAG System")
+    print("=" * 40)
+    print(f"Input directory: {args.input_dir}")
+    print(f"Vector store path: {args.vector_store}")
+    print("=" * 40)
+    print()
+    
+    # Initialize RAG pipeline
+    try:
+        rag = RAGPipeline(vector_store_path=args.vector_store)
+        
+        if args.process:
+            # Process documents
+            print("Processing documents...")
+            results = rag.process_directory(args.input_dir)
+            
+            print("\n" + "=" * 50)
+            print("PROCESSING SUMMARY")
+            print("=" * 50)
+            print(f"Files processed: {results['processed_files']}/{results['total_files']}")
+            print(f"Total chunks created: {results['total_chunks']}")
+            print("✅ Documents processed successfully!")
+            print()
+        
+        # Get system stats
+        stats = rag.get_stats()
+        print(f"Vector store contains: {stats['total_chunks']} chunks")
+        print()
+        
+        if args.query:
+            # Single query mode
+            print(f"Query: {args.query}")
+            print("-" * 50)
+            
+            result = rag.query(args.query, top_k=args.top_k)
+            
+            if 'error' in result:
+                print(f"❌ Error: {result['error']}")
+                return
+            
+            print(f"Found {len(result['results'])} relevant chunks:")
+            print()
+            
+            for i, chunk in enumerate(result['results'], 1):
+                print(f"Result {i} (Similarity: {chunk['similarity']:.3f}):")
+                print(f"Company: {chunk['metadata'].get('company', 'Unknown')}")
+                print(f"Year: {chunk['metadata'].get('year', 'Unknown')}")
+                print(f"Text: {chunk['text'][:200]}...")
+                print("-" * 30)
+                print()
+        
+        elif not args.process:
+            # Interactive query mode
+            print("🤖 Interactive Query Mode")
+            print("Type your questions about the financial documents.")
+            print("Type 'quit' or 'exit' to stop.")
+            print()
+            
+            while True:
+                try:
+                    query = input("💬 Your question: ").strip()
+                    
+                    if query.lower() in ['quit', 'exit', 'q']:
+                        print("👋 Goodbye!")
+                        break
+                    
+                    if not query:
+                        continue
+                    
+                    print(f"\n🔍 Searching for: {query}")
+                    print("-" * 50)
+                    
+                    result = rag.query(query, top_k=args.top_k)
+                    
+                    if 'error' in result:
+                        print(f"❌ Error: {result['error']}")
+                        continue
+                    
+                    if not result['results']:
+                        print("No relevant information found.")
+                        print()
+                        continue
+                    
+                    print(f"Found {len(result['results'])} relevant chunks:")
+                    print()
+                    
+                    for i, chunk in enumerate(result['results'], 1):
+                        print(f"📄 Result {i} (Similarity: {chunk['similarity']:.3f}):")
+                        print(f"   Company: {chunk['metadata'].get('company', 'Unknown')}")
+                        print(f"   Year: {chunk['metadata'].get('year', 'Unknown')}")
+                        print(f"   Text: {chunk['text'][:300]}...")
+                        print()
+                    
+                    print("-" * 50)
+                    print()
+                    
+                except KeyboardInterrupt:
+                    print("\n\n👋 Goodbye!")
+                    break
+                except Exception as e:
+                    print(f"❌ Error: {e}")
+                    print()
+            
+    except Exception as e:
+        print(f"❌ Error initializing RAG system: {e}")
+        sys.exit(1)
+def main():
+    """Main entry point with argument parsing."""
+    parser = argparse.ArgumentParser(
+        description='SEC EDGAR Financial RAG System',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Download filings (scraper mode)
+  python main.py scrape --companies GOOGL MSFT --years 2023 2024
+  
+  # Process downloaded filings for RAG
+  python main.py rag --process --input-dir filings
+  
+  # Query the RAG system
+  python main.py rag --query "What are the main revenue sources?"
+  
+  # Interactive query mode
+  python main.py rag --input-dir demo_filings
+        """
+    )
+    
+    # Add subcommands
+    subparsers = parser.add_subparsers(dest='mode', help='Operation mode')
+    
+    # Scraper mode
+    scraper_parser = subparsers.add_parser('scrape', help='Download SEC filings')
+    scraper_parser.add_argument('--companies', nargs='+', default=['GOOGL', 'MSFT', 'NVDA'],
+                               choices=['GOOGL', 'MSFT', 'NVDA'],
+                               help='Company symbols to download (default: all)')
+    scraper_parser.add_argument('--years', nargs='+', type=int, default=[2022, 2023, 2024],
+                               help='Years to download filings for (default: 2022 2023 2024)')
+    scraper_parser.add_argument('--output-dir', default='filings',
+                               help='Output directory for downloaded filings (default: filings)')
+    scraper_parser.add_argument('--user-agent', 
+                               default='Financial Analysis Tool 1.0 (jaganraajan@gmail.com)',
+                               help='User agent for SEC requests')
+    
+    # RAG mode
+    rag_parser = subparsers.add_parser('rag', help='RAG pipeline operations')
+    rag_parser.add_argument('--input-dir', default='demo_filings',
+                           help='Directory containing HTML filings (default: demo_filings)')
+    rag_parser.add_argument('--vector-store', default='./vector_db',
+                           help='Path for vector store persistence (default: ./vector_db)')
+    rag_parser.add_argument('--process', action='store_true',
+                           help='Process documents and build vector store')
+    rag_parser.add_argument('--query', type=str,
+                           help='Single query to execute')
+    rag_parser.add_argument('--top-k', type=int, default=5,
+                           help='Number of top results to return (default: 5)')
+    
+    # Global options
+    parser.add_argument('--verbose', '-v', action='store_true',
+                       help='Enable verbose logging')
+    
+    args = parser.parse_args()
+    
+    # If no mode specified, show help
+    if not args.mode:
+        parser.print_help()
+        sys.exit(1)
+    
+    # Setup logging
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    setup_logging(log_level)
+    
+    # Route to appropriate mode
+    if args.mode == 'scrape':
+        run_scraper_mode(args)
+    elif args.mode == 'rag':
+        run_rag_mode(args)
+    else:
+        parser.print_help()
         sys.exit(1)
 
 
