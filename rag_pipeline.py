@@ -7,6 +7,7 @@ including text extraction, chunking, embedding, vector storage, and retrieval.
 """
 
 import os
+from dotenv import load_dotenv
 import re
 import logging
 from typing import List, Dict, Optional, Tuple
@@ -173,15 +174,16 @@ class TextChunker:
 
 class EmbeddingService:
     """Handle embeddings using Azure OpenAI (with mock fallback for testing)."""
-    
-    def __init__(self, azure_endpoint: Optional[str] = None, api_key: Optional[str] = None, 
-                 api_version: str = "2024-02-01", model: str = "text-embedding-ada-002"):
-        self.azure_endpoint = azure_endpoint or os.getenv('AZURE_OPENAI_ENDPOINT')
-        self.api_key = api_key or os.getenv('AZURE_OPENAI_API_KEY')
+
+    def __init__(self, api_version: str = "2024-02-01", model: str = "text-embedding-ada-002"):
+        # Load environment variables from .env file
+        load_dotenv()
+        self.azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+        self.api_key = os.getenv('AZURE_OPENAI_API_KEY')
         self.api_version = api_version
         self.model = model
         self.logger = logging.getLogger(__name__)
-        
+
         # Initialize client if credentials are available
         self.client = None
         if self.azure_endpoint and self.api_key:
