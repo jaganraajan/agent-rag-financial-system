@@ -56,7 +56,9 @@ class QueryDecomposer:
             'revenue': ['revenue', 'total revenue', 'net revenue', 'sales'],
             'profit': ['profit', 'net income', 'net profit'],
             'growth': ['growth', 'growth rate', 'increase', 'decrease'],
-            'cash flow': ['cash flow', 'operating cash flow', 'free cash flow']
+            'cash flow': ['cash flow', 'operating cash flow', 'free cash flow'],
+            'segment analysis': ['percentage', 'portion', 'segment', 'division', 'cloud', 'data center', 'datacenter'],
+            'ai strategy': ['ai investment', 'artificial intelligence', 'ai strategy', 'ai spending', 'ai initiatives', 'machine learning']
         }
         
         # Initialize LangGraph workflow
@@ -98,8 +100,49 @@ class QueryDecomposer:
         
         state['needs_comparison'] = any(re.search(pattern, query) for pattern in comparative_patterns)
         
-        # Determine query type
-        if state['needs_comparison']:
+        # Detect year-over-year pattern
+        yoy_patterns = [
+            r'\bfrom\s+\d{4}\s+to\s+\d{4}\b',
+            r'\byear.over.year\b',
+            r'\byoy\b',
+            r'\bcompared\s+to\s+(last\s+year|previous\s+year|\d{4})\b',
+            r'\bgrow\s+from\s+\d{4}\s+to\s+\d{4}\b',
+            r'\bhow\s+did.*grow.*from.*to\b'
+        ]
+        
+        is_yoy = any(re.search(pattern, query) for pattern in yoy_patterns)
+        
+        # Detect segment analysis patterns
+        segment_patterns = [
+            r'\bpercentage\s+of\b',
+            r'\bportion\s+of\b',
+            r'\bwhat\s+percent\b',
+            r'\bcloud\s+(revenue|income)\b',
+            r'\bdata\s+center\s+(revenue|income)\b'
+        ]
+        
+        is_segment = any(re.search(pattern, query) for pattern in segment_patterns)
+        
+        # Detect AI strategy patterns  
+        ai_patterns = [
+            r'\bai\s+(investment|strategy|spending|initiative)\b',
+            r'\bartificial\s+intelligence\b',
+            r'\bmachine\s+learning\b',
+            r'\bai\s+mentioned\b',
+            r'\bcompare\s+ai\s+investment\b',
+            r'\bai.*10-k\b'
+        ]
+        
+        is_ai_strategy = any(re.search(pattern, query) for pattern in ai_patterns)
+        
+        # Determine query type based on patterns
+        if is_ai_strategy:
+            state['query_type'] = "ai_strategy"
+        elif is_yoy:
+            state['query_type'] = "yoy_comparison"
+        elif is_segment:
+            state['query_type'] = "segment_analysis"
+        elif state['needs_comparison']:
             state['query_type'] = "comparative"
         elif re.search(r'\b(trend|over time|historical|change)\b', query):
             state['query_type'] = "temporal"
@@ -143,7 +186,51 @@ class QueryDecomposer:
         """Generate sub-queries based on the analysis."""
         sub_queries = []
         
-        if state['query_type'] == "comparative" and state['companies']:
+        if state['query_type'] == "ai_strategy":
+            # Generate AI strategy queries for each company
+            companies = state['companies'] if state['companies'] else ['MSFT', 'GOOGL', 'NVDA']
+            for company in companies:
+                for year in state['years']:
+                    sub_query = f"{company} AI investments artificial intelligence strategy {year}"
+                    sub_queries.append(sub_query)
+        
+        elif state['query_type'] == "segment_analysis":
+            # Generate segment-specific queries
+            if state['companies']:
+                company = state['companies'][0]  # Focus on first company for segment analysis
+                year = state['years'][0] if state['years'] else '2023'
+                # Extract segment from query
+                query_lower = state['original_query'].lower()
+                if 'cloud' in query_lower:
+                    sub_query = f"{company} cloud revenue segment {year}"
+                elif 'data center' in query_lower or 'datacenter' in query_lower:
+                    sub_query = f"{company} data center revenue segment {year}"
+                else:
+                    sub_query = f"{company} revenue segments breakdown {year}"
+                sub_queries.append(sub_query)
+                # Also get total revenue for percentage calculation
+                sub_queries.append(f"{company} total revenue {year}")
+        
+        elif state['query_type'] == "yoy_comparison":
+            # Generate year-over-year comparison queries
+            if state['companies']:
+                company = state['companies'][0]
+                # Extract both years from query
+                years = re.findall(r'\b(20\d{2})\b', state['original_query'])
+                if len(years) >= 2:
+                    for year in years:
+                        metric = state['financial_metric'] or 'revenue'
+                        sub_query = f"{company} {metric} {year}"
+                        sub_queries.append(sub_query)
+                else:
+                    # Default to current and previous year
+                    current_year = state['years'][0] if state['years'] else '2023'
+                    previous_year = str(int(current_year) - 1)
+                    metric = state['financial_metric'] or 'revenue'
+                    sub_queries.append(f"{company} {metric} {current_year}")
+                    sub_queries.append(f"{company} {metric} {previous_year}")
+        
+        elif state['query_type'] == "comparative" and state['companies']:
             # Generate individual queries for each company
             for company in state['companies']:
                 for year in state['years']:
