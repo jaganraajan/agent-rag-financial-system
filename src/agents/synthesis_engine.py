@@ -32,7 +32,6 @@ class SynthesisResult:
     reasoning: str
     sub_queries: List[str]
     sources: List[SourceInfo]
-    confidence: float = 0.0
 
 
 class SynthesisEngine:
@@ -114,8 +113,7 @@ class SynthesisEngine:
                 answer="Unable to synthesize results due to an error.",
                 reasoning=f"Synthesis failed: {str(e)}",
                 sub_queries=sub_queries,
-                sources=[],
-                confidence=0.0
+                sources=[]
             )
     
     def _extract_sources(self, rag_results: List[Dict]) -> List[SourceInfo]:
@@ -194,8 +192,7 @@ class SynthesisEngine:
             answer=answer,
             reasoning=reasoning,
             sub_queries=sub_queries,
-            sources=enhanced_sources,
-            confidence=0.9
+            sources=enhanced_sources
         )
     
     def _synthesize_revenue_comparison(self, query: str, sub_queries: List[str], 
@@ -243,8 +240,7 @@ class SynthesisEngine:
             answer=answer,
             reasoning=reasoning,
             sub_queries=sub_queries,
-            sources=enhanced_sources,
-            confidence=0.9
+            sources=enhanced_sources
         )
     
     def _synthesize_growth_comparison(self, query: str, sub_queries: List[str], 
@@ -292,8 +288,7 @@ class SynthesisEngine:
             answer=answer,
             reasoning=reasoning,
             sub_queries=sub_queries,
-            sources=enhanced_sources,
-            confidence=0.85
+            sources=enhanced_sources
         )
     
     def _synthesize_general_comparison(self, query: str, sub_queries: List[str], 
@@ -320,8 +315,7 @@ class SynthesisEngine:
             answer=answer,
             reasoning=reasoning,
             sub_queries=sub_queries,
-            sources=sources[:5],  # Limit to top 5 sources
-            confidence=0.7
+            sources=sources[:5]  # Limit to top 5 sources
         )
     
     def format_json_output(self, synthesis_result: SynthesisResult) -> Dict[str, Any]:
@@ -334,14 +328,13 @@ class SynthesisEngine:
                 "excerpt": source.excerpt,
                 "page": source.page or 10
             })
-        
+
         return {
             "query": synthesis_result.query,
             "answer": synthesis_result.answer,
             "reasoning": synthesis_result.reasoning,
             "sub_queries": synthesis_result.sub_queries,
-            "sources": sources_json,
-            "confidence": synthesis_result.confidence
+            "sources": sources_json
         }
 
 

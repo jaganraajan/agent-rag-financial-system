@@ -123,8 +123,7 @@ class EnhancedRAGPipeline:
                 "answer": f"Found {len(basic_result.get('results', []))} relevant results for your query.",
                 "reasoning": "Basic RAG retrieval without decomposition due to processing limitations.",
                 "sub_queries": [question],
-                "sources": sources,
-                "confidence": 0.5
+                "sources": sources
             }
         else:
             return basic_result
@@ -166,7 +165,6 @@ class EnhancedRAGPipeline:
             reasoning=reasoning,
             sub_queries=sub_queries,
             sources=sources[:5],  # Limit to top 5
-            confidence=0.7
         )
     
     def _format_traditional_output(self, synthesis_result, rag_results: List[Dict]) -> Dict:
@@ -186,8 +184,7 @@ class EnhancedRAGPipeline:
             'synthesis': {
                 'answer': synthesis_result.answer,
                 'reasoning': synthesis_result.reasoning,
-                'sub_queries': synthesis_result.sub_queries,
-                'confidence': synthesis_result.confidence
+                'sub_queries': synthesis_result.sub_queries
             }
         }
     
