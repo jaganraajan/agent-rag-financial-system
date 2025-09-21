@@ -27,26 +27,33 @@ class TextExtractor:
         self.logger = logging.getLogger(__name__)
     
     def extract_text_from_html(self, file_path: str) -> str:
-        """Extract clean text from HTML filing."""
+        """Extract clean text from the first <document> section of HTML filing."""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
+            # Extract the first <document> section using regex
+            doc_match = re.search(r'<document>(.*?)</document>', content, re.DOTALL | re.IGNORECASE)
+            doc_html = doc_match.group(1) if doc_match else content
+
             # Parse HTML
-            soup = BeautifulSoup(content, 'html.parser')
-            
+            soup = BeautifulSoup(doc_html, 'html.parser')
+
             # Remove script and style elements
             for script in soup(["script", "style"]):
                 script.decompose()
-            
+
             # Extract text
-            text = soup.get_text()
-            
-            # Clean up text
+            text = soup.get_text(separator="\n")
+
+            # Clean up whitespace and lines
+            text = "\n".join([line.strip() for line in text.splitlines() if line.strip()])
+
+            # Further clean up text
             text = self._clean_text(text)
-            
+
             return text
-            
+
         except Exception as e:
             self.logger.error(f"Error extracting text from {file_path}: {e}")
             return ""
