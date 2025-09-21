@@ -44,11 +44,13 @@ class SynthesisEngine:
         # Patterns for extracting financial metrics
         self.metric_patterns = {
             'operating_margin': [
+                r'operating\s+margin\s+was\s+(\d+\.?\d*)%',
                 r'operating\s+margin[:\s]*(\d+\.?\d*)%?',
                 r'operating\s+income\s+margin[:\s]*(\d+\.?\d*)%?',
                 r'(\d+\.?\d*)%?\s*operating\s+margin'
             ],
             'revenue': [
+                r'total\s+revenue\s+of\s+\$(\d+\.?\d*)\s*(billion|million|trillion)?',
                 r'revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
                 r'total\s+revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
                 r'net\s+revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?'
@@ -60,55 +62,12 @@ class SynthesisEngine:
             ]
         }
         
-        # Sample financial data for demonstration (since demo files are mock)
-        self.demo_financial_data = {
-            'MSFT': {
-                '2023': {
-                    'operating_margin': 42.1, 'revenue': 211.9, 'growth': 7.2,
-                    'cloud_revenue': 111.6, 'ai_investment': 13.9
-                },
-                '2022': {
-                    'operating_margin': 41.5, 'revenue': 198.3, 'growth': 18.0,
-                    'cloud_revenue': 91.2, 'ai_investment': 10.2
-                },
-                '2024': {
-                    'operating_margin': 43.0, 'revenue': 245.0, 'growth': 15.6,
-                    'cloud_revenue': 135.0, 'ai_investment': 17.8
-                }
-            },
-            'GOOGL': {
-                '2023': {
-                    'operating_margin': 25.2, 'revenue': 307.4, 'growth': 8.7,
-                    'cloud_revenue': 33.1, 'ai_investment': 31.0
-                },
-                '2022': {
-                    'operating_margin': 23.8, 'revenue': 282.8, 'growth': 10.6,
-                    'cloud_revenue': 26.3, 'ai_investment': 28.5
-                },
-                '2024': {
-                    'operating_margin': 26.1, 'revenue': 334.7, 'growth': 8.9,
-                    'cloud_revenue': 38.5, 'ai_investment': 35.2
-                }
-            },
-            'NVDA': {
-                '2023': {
-                    'operating_margin': 32.1, 'revenue': 60.9, 'growth': 126.0,
-                    'datacenter_revenue': 47.5, 'ai_investment': 9.8
-                },
-                '2022': {
-                    'operating_margin': 15.3, 'revenue': 27.0, 'growth': 0.8,
-                    'datacenter_revenue': 15.0, 'ai_investment': 6.4
-                },
-                '2024': {
-                    'operating_margin': 55.0, 'revenue': 96.3, 'growth': 58.2,
-                    'datacenter_revenue': 75.9, 'ai_investment': 14.2
-                }
-            }
-        }
+        # Company name mapping
+        self.company_names = {'MSFT': 'Microsoft', 'GOOGL': 'Google', 'NVDA': 'NVIDIA'}
     
     def synthesize_comparative_results(self, query: str, sub_queries: List[str], 
                                      rag_results: List[Dict], query_type: str = "comparative") -> SynthesisResult:
-        """Synthesize results for comparative queries.
+        """Synthesize results for the two supported query types.
         
         Args:
             query: Original query
@@ -123,27 +82,22 @@ class SynthesisEngine:
             # Extract sources from RAG results
             sources = self._extract_sources(rag_results)
             
-            # Determine the type of synthesis needed based on query content
-            query_lower = query.lower()
-            
-            # Check for year-over-year pattern specifically
-            if "from" in query_lower and re.search(r'\d{4}.*to.*\d{4}', query_lower):
-                return self._synthesize_yoy_comparison(query, sub_queries, sources)
-            elif "ai investment" in query_lower or "artificial intelligence" in query_lower or "ai strategy" in query_lower:
-                return self._synthesize_ai_strategy_comparison(query, sub_queries, sources)
-            elif "percentage" in query_lower or ("cloud" in query_lower and "revenue" in query_lower) or ("data center" in query_lower and "revenue" in query_lower):
-                return self._synthesize_segment_analysis(query, sub_queries, sources)
-            elif "operating margin" in query_lower:
-                return self._synthesize_operating_margin_comparison(query, sub_queries, sources)
-            elif "revenue" in query_lower and len(re.findall(r'\b(20\d{2})\b', query)) == 1:
-                # Basic metrics for a single year
+            # Only support two query types as per requirements
+            if query_type == "simple":
+                # Basic Metrics: Single company, single metric (e.g., "What was Microsoft's total revenue in 2023?")
                 return self._synthesize_basic_metrics(query, sub_queries, sources)
-            elif "revenue" in query_lower:
-                return self._synthesize_revenue_comparison(query, sub_queries, sources)
-            elif "growth" in query_lower:
-                return self._synthesize_growth_comparison(query, sub_queries, sources)
+            elif query_type == "comparative":
+                # Cross-Company: Compare across companies (e.g., "Which company had the highest operating margin in 2023?")
+                return self._synthesize_cross_company_comparison(query, sub_queries, sources)
             else:
-                return self._synthesize_general_comparison(query, sub_queries, sources)
+                # Unsupported query type
+                return SynthesisResult(
+                    query=query,
+                    answer="This query type is not supported. Please ask a basic metrics question about a specific company or a cross-company comparison question.",
+                    reasoning=f"Query type '{query_type}' is not supported. Only basic metrics and cross-company comparisons are supported.",
+                    sub_queries=sub_queries,
+                    sources=[]
+                )
                 
         except Exception as e:
             self.logger.error(f"Error in synthesis: {e}")
@@ -177,189 +131,42 @@ class SynthesisEngine:
         
         return sources
     
-    def _synthesize_operating_margin_comparison(self, query: str, sub_queries: List[str], 
-                                              sources: List[SourceInfo]) -> SynthesisResult:
-        """Synthesize operating margin comparison results."""
-        # Extract year from query
-        year_match = re.search(r'\b(20\d{2})\b', query)
-        year = year_match.group(1) if year_match else '2023'
+    def _extract_metric_value(self, text: str, metric_type: str) -> Optional[str]:
+        """Extract a financial metric value from text.
         
-        # Use demo data for realistic comparison
-        company_margins = {}
-        for company, years_data in self.demo_financial_data.items():
-            if year in years_data:
-                company_margins[company] = years_data[year]['operating_margin']
+        Args:
+            text: The text to search
+            metric_type: Type of metric to extract ('revenue', 'operating_margin', etc.)
+            
+        Returns:
+            String value if found, None otherwise
+        """
+        patterns = self.metric_patterns.get(metric_type, [])
         
-        if not company_margins:
-            return SynthesisResult(
-                query=query,
-                answer="Unable to determine operating margins for the specified year.",
-                reasoning="No operating margin data found for the requested year.",
-                sub_queries=sub_queries,
-                sources=sources
-            )
+        for pattern in patterns:
+            match = re.search(pattern, text.lower())
+            if match:
+                value = match.group(1)
+                unit = match.group(2) if len(match.groups()) > 1 else None
+                
+                # Convert to standard format
+                if metric_type == 'operating_margin':
+                    return f"{value}%"
+                elif metric_type == 'revenue':
+                    if unit and 'billion' in unit:
+                        return value
+                    elif unit and 'million' in unit:
+                        return str(float(value) / 1000)  # Convert to billions
+                    else:
+                        return value
+                else:
+                    return value
         
-        # Find highest margin
-        highest_company = max(company_margins.keys(), key=lambda x: company_margins[x])
-        highest_margin = company_margins[highest_company]
-        
-        # Create sorted list for context
-        sorted_companies = sorted(company_margins.items(), key=lambda x: x[1], reverse=True)
-        
-        # Generate answer
-        answer = f"{highest_company} had the highest operating margin at {highest_margin}% in {year}"
-        if len(sorted_companies) > 1:
-            second_company, second_margin = sorted_companies[1]
-            answer += f", followed by {second_company} at {second_margin}%"
-        
-        # Generate reasoning
-        reasoning = f"Retrieved operating margins for {len(company_margins)} companies from their {year} 10-K filings. "
-        reasoning += f"Compared the following: {', '.join([f'{c}: {m}%' for c, m in sorted_companies])}"
-        
-        # Create enhanced sources with specific data
-        enhanced_sources = []
-        for company, margin in sorted_companies:
-            enhanced_sources.append(SourceInfo(
-                company=company,
-                year=year,
-                excerpt=f"Operating margin was {margin}%...",
-                page=10  # Mock page number
-            ))
-        
-        return SynthesisResult(
-            query=query,
-            answer=answer,
-            reasoning=reasoning,
-            sub_queries=sub_queries,
-            sources=enhanced_sources
-        )
-    
-    def _synthesize_revenue_comparison(self, query: str, sub_queries: List[str], 
-                                     sources: List[SourceInfo]) -> SynthesisResult:
-        """Synthesize revenue comparison results."""
-        year_match = re.search(r'\b(20\d{2})\b', query)
-        year = year_match.group(1) if year_match else '2023'
-        
-        company_revenues = {}
-        for company, years_data in self.demo_financial_data.items():
-            if year in years_data:
-                company_revenues[company] = years_data[year]['revenue']
-        
-        if not company_revenues:
-            return SynthesisResult(
-                query=query,
-                answer="Unable to determine revenue data for the specified year.",
-                reasoning="No revenue data found for the requested year.",
-                sub_queries=sub_queries,
-                sources=sources
-            )
-        
-        sorted_companies = sorted(company_revenues.items(), key=lambda x: x[1], reverse=True)
-        highest_company, highest_revenue = sorted_companies[0]
-        
-        answer = f"{highest_company} had the highest revenue at ${highest_revenue} billion in {year}"
-        if len(sorted_companies) > 1:
-            second_company, second_revenue = sorted_companies[1]
-            answer += f", followed by {second_company} at ${second_revenue} billion"
-        
-        reasoning = f"Retrieved revenue data for {len(company_revenues)} companies from their {year} financial filings. "
-        reasoning += f"Compared: {', '.join([f'{c}: ${r}B' for c, r in sorted_companies])}"
-        
-        enhanced_sources = []
-        for company, revenue in sorted_companies:
-            enhanced_sources.append(SourceInfo(
-                company=company,
-                year=year,
-                excerpt=f"Total revenue was ${revenue} billion...",
-                page=15
-            ))
-        
-        return SynthesisResult(
-            query=query,
-            answer=answer,
-            reasoning=reasoning,
-            sub_queries=sub_queries,
-            sources=enhanced_sources
-        )
-    
-    def _synthesize_growth_comparison(self, query: str, sub_queries: List[str], 
-                                    sources: List[SourceInfo]) -> SynthesisResult:
-        """Synthesize growth comparison results."""
-        year_match = re.search(r'\b(20\d{2})\b', query)
-        year = year_match.group(1) if year_match else '2023'
-        
-        company_growth = {}
-        for company, years_data in self.demo_financial_data.items():
-            if year in years_data:
-                company_growth[company] = years_data[year]['growth']
-        
-        if not company_growth:
-            return SynthesisResult(
-                query=query,
-                answer="Unable to determine growth data for the specified year.",
-                reasoning="No growth data found for the requested year.",
-                sub_queries=sub_queries,
-                sources=sources
-            )
-        
-        sorted_companies = sorted(company_growth.items(), key=lambda x: x[1], reverse=True)
-        highest_company, highest_growth = sorted_companies[0]
-        
-        answer = f"{highest_company} had the highest growth rate at {highest_growth}% in {year}"
-        if len(sorted_companies) > 1:
-            second_company, second_growth = sorted_companies[1]
-            answer += f", followed by {second_company} at {second_growth}%"
-        
-        reasoning = f"Retrieved growth data for {len(company_growth)} companies from their {year} financial reports. "
-        reasoning += f"Compared: {', '.join([f'{c}: {g}%' for c, g in sorted_companies])}"
-        
-        enhanced_sources = []
-        for company, growth in sorted_companies:
-            enhanced_sources.append(SourceInfo(
-                company=company,
-                year=year,
-                excerpt=f"Revenue growth rate was {growth}%...",
-                page=8
-            ))
-        
-        return SynthesisResult(
-            query=query,
-            answer=answer,
-            reasoning=reasoning,
-            sub_queries=sub_queries,
-            sources=enhanced_sources
-        )
-    
-    def _synthesize_general_comparison(self, query: str, sub_queries: List[str], 
-                                     sources: List[SourceInfo]) -> SynthesisResult:
-        """Synthesize general comparison results."""
-        # Group sources by company
-        company_sources = defaultdict(list)
-        for source in sources:
-            company_sources[source.company].append(source)
-        
-        # Create a general comparative answer
-        companies = list(company_sources.keys())
-        if len(companies) >= 2:
-            answer = f"Based on the available data, {companies[0]} and {companies[1]} show different financial profiles. "
-            answer += f"Analysis covers {len(sources)} data points across {len(companies)} companies."
-        else:
-            answer = "Limited comparative data available for the requested analysis."
-        
-        reasoning = f"Analyzed {len(sources)} document chunks across {len(companies)} companies. "
-        reasoning += "Synthesis based on document similarity and relevance to the query."
-        
-        return SynthesisResult(
-            query=query,
-            answer=answer,
-            reasoning=reasoning,
-            sub_queries=sub_queries,
-            sources=sources[:5]  # Limit to top 5 sources
-        )
-    
+        return None
+
     def _synthesize_basic_metrics(self, query: str, sub_queries: List[str], 
                                 sources: List[SourceInfo]) -> SynthesisResult:
-        """Synthesize basic metrics results for a single company and year."""
+        """Synthesize basic metrics results for a single company and year using actual RAG data."""
         # Extract company and year from query
         year_match = re.search(r'\b(20\d{2})\b', query)
         year = year_match.group(1) if year_match else '2023'
@@ -372,274 +179,127 @@ class SynthesisEngine:
                 company = ticker
                 break
         
-        if not company or year not in self.demo_financial_data.get(company, {}):
-            return SynthesisResult(
-                query=query,
-                answer="Unable to find the requested financial data.",
-                reasoning="No data available for the specified company and year.",
-                sub_queries=sub_queries,
-                sources=sources
-            )
-        
-        data = self.demo_financial_data[company][year]
-        revenue = data['revenue']
-        
-        # Generate answer
-        company_names = {'MSFT': 'Microsoft', 'GOOGL': 'Google', 'NVDA': 'NVIDIA'}
-        answer = f"{company_names.get(company, company)}'s total revenue was ${revenue} billion in {year}."
-        
-        reasoning = f"Retrieved revenue data for {company_names.get(company, company)} from their {year} financial filing."
-        
-        enhanced_sources = [SourceInfo(
-            company=company,
-            year=year,
-            excerpt=f"Total revenue was ${revenue} billion...",
-            page=12
-        )]
-        
-        return SynthesisResult(
-            query=query,
-            answer=answer,
-            reasoning=reasoning,
-            sub_queries=sub_queries,
-            sources=enhanced_sources
-        )
-    
-    def _synthesize_yoy_comparison(self, query: str, sub_queries: List[str], 
-                                 sources: List[SourceInfo]) -> SynthesisResult:
-        """Synthesize year-over-year comparison results."""
-        # Extract years and company
-        years = re.findall(r'\b(20\d{2})\b', query)
-        if len(years) < 2:
-            return SynthesisResult(
-                query=query,
-                answer="Unable to perform year-over-year comparison.",
-                reasoning="Need at least two years for comparison.",
-                sub_queries=sub_queries,
-                sources=sources
-            )
-        
-        year1, year2 = sorted(years)[:2]
-        
-        # Extract company
-        query_lower = query.lower()
-        company = None
-        for variant, ticker in {'microsoft': 'MSFT', 'google': 'GOOGL', 'alphabet': 'GOOGL', 'nvidia': 'NVDA'}.items():
-            if variant in query_lower:
-                company = ticker
-                break
-        
         if not company:
             return SynthesisResult(
                 query=query,
-                answer="Unable to identify company for comparison.",
+                answer="Unable to identify the company in the query.",
                 reasoning="Company not found in query.",
                 sub_queries=sub_queries,
                 sources=sources
             )
         
-        # Get data for both years
-        company_data = self.demo_financial_data.get(company, {})
-        if year1 not in company_data or year2 not in company_data:
+        # Extract financial data from RAG sources
+        revenue_value = None
+        relevant_sources = []
+        
+        for source in sources:
+            if source.company == company and source.year == year:
+                # Try to extract revenue value from the text excerpt
+                revenue_match = self._extract_metric_value(source.excerpt, 'revenue')
+                if revenue_match:
+                    revenue_value = revenue_match
+                    relevant_sources.append(source)
+                    break
+        
+        if not revenue_value:
             return SynthesisResult(
                 query=query,
-                answer="Unable to find data for the requested years.",
-                reasoning=f"Data not available for {company} in {year1} or {year2}.",
+                answer="Unable to find the requested financial data in the available sources.",
+                reasoning=f"No revenue data found for {self.company_names.get(company, company)} in {year} from the RAG sources.",
                 sub_queries=sub_queries,
                 sources=sources
             )
         
-        data1 = company_data[year1]
-        data2 = company_data[year2]
+        # Generate answer using actual data
+        company_name = self.company_names.get(company, company)
+        answer = f"{company_name}'s total revenue was ${revenue_value} billion in {year}."
         
-        # Determine metric from query
-        if "data center" in query_lower or "datacenter" in query_lower:
-            metric_key = 'datacenter_revenue'
-            metric_name = 'data center revenue'
-            value1 = data1.get(metric_key, 0)
-            value2 = data2.get(metric_key, 0)
-        else:
-            metric_key = 'revenue'
-            metric_name = 'revenue'
-            value1 = data1.get(metric_key, 0)
-            value2 = data2.get(metric_key, 0)
-        
-        # Calculate growth
-        if value1 > 0:
-            growth_rate = ((value2 - value1) / value1) * 100
-        else:
-            growth_rate = 0
-        
-        # Generate answer
-        company_names = {'MSFT': 'Microsoft', 'GOOGL': 'Google', 'NVDA': 'NVIDIA'}
-        company_name = company_names.get(company, company)
-        
-        answer = f"{company_name}'s {metric_name} grew from ${value1:.1f} billion in {year1} to ${value2:.1f} billion in {year2}, "
-        answer += f"representing a {growth_rate:.1f}% increase."
-        
-        reasoning = f"Compared {company_name}'s {metric_name} between {year1} and {year2}. "
-        reasoning += f"Calculated growth rate based on financial data from both years."
-        
-        enhanced_sources = [
-            SourceInfo(
-                company=company,
-                year=year1,
-                excerpt=f"{metric_name.title()} was ${value1:.1f} billion...",
-                page=15
-            ),
-            SourceInfo(
-                company=company,
-                year=year2,
-                excerpt=f"{metric_name.title()} was ${value2:.1f} billion...",
-                page=15
-            )
-        ]
+        reasoning = f"Retrieved revenue data for {company_name} from their {year} financial filing."
         
         return SynthesisResult(
             query=query,
             answer=answer,
             reasoning=reasoning,
             sub_queries=sub_queries,
-            sources=enhanced_sources
+            sources=relevant_sources
         )
-    
-    def _synthesize_segment_analysis(self, query: str, sub_queries: List[str], 
-                                   sources: List[SourceInfo]) -> SynthesisResult:
-        """Synthesize segment analysis results."""
-        # Extract year and company
+
+    def _synthesize_cross_company_comparison(self, query: str, sub_queries: List[str], 
+                                           sources: List[SourceInfo]) -> SynthesisResult:
+        """Synthesize cross-company comparison results using actual RAG data."""
+        # Extract year from query
         year_match = re.search(r'\b(20\d{2})\b', query)
         year = year_match.group(1) if year_match else '2023'
         
+        # Determine the metric being compared
         query_lower = query.lower()
-        company = None
-        for variant, ticker in {'microsoft': 'MSFT', 'google': 'GOOGL', 'alphabet': 'GOOGL', 'nvidia': 'NVDA'}.items():
-            if variant in query_lower:
-                company = ticker
-                break
+        if 'operating margin' in query_lower:
+            metric_type = 'operating_margin'
+            metric_name = 'operating margin'
+        elif 'revenue' in query_lower:
+            metric_type = 'revenue'
+            metric_name = 'revenue'
+        else:
+            metric_type = 'revenue'  # Default to revenue
+            metric_name = 'revenue'
         
-        if not company or year not in self.demo_financial_data.get(company, {}):
+        # Extract data from RAG sources for each company
+        company_data = {}
+        relevant_sources = []
+        
+        for source in sources:
+            if source.year == year:
+                value = self._extract_metric_value(source.excerpt, metric_type)
+                if value:
+                    company_data[source.company] = {
+                        'value': value,
+                        'numeric_value': float(value.replace('%', '').replace('$', '')) if value else 0
+                    }
+                    relevant_sources.append(source)
+        
+        if not company_data:
             return SynthesisResult(
                 query=query,
-                answer="Unable to find segment data for the requested company and year.",
-                reasoning="No segment data available for the specified company and year.",
+                answer=f"Unable to find {metric_name} data for the requested companies in {year}.",
+                reasoning=f"No {metric_name} data found in the RAG sources for {year}.",
                 sub_queries=sub_queries,
                 sources=sources
             )
         
-        data = self.demo_financial_data[company][year]
-        total_revenue = data['revenue']
-        
-        # Determine segment from query
-        if 'cloud' in query_lower:
-            segment_revenue = data.get('cloud_revenue', 0)
-            segment_name = 'cloud'
-        elif 'data center' in query_lower or 'datacenter' in query_lower:
-            segment_revenue = data.get('datacenter_revenue', 0)
-            segment_name = 'data center'
-        else:
-            return SynthesisResult(
-                query=query,
-                answer="Unable to identify the specific segment for analysis.",
-                reasoning="Segment type not recognized in query.",
-                sub_queries=sub_queries,
-                sources=sources
-            )
-        
-        # Calculate percentage
-        if total_revenue > 0:
-            percentage = (segment_revenue / total_revenue) * 100
-        else:
-            percentage = 0
+        # Find the highest value
+        highest_company = max(company_data.keys(), key=lambda x: company_data[x]['numeric_value'])
+        highest_value = company_data[highest_company]['value']
         
         # Generate answer
-        company_names = {'MSFT': 'Microsoft', 'GOOGL': 'Google', 'NVDA': 'NVIDIA'}
-        company_name = company_names.get(company, company)
+        company_name = self.company_names.get(highest_company, highest_company)
         
-        answer = f"{company_name}'s {segment_name} revenue represented {percentage:.1f}% of total revenue in {year}. "
-        answer += f"{segment_name.title()} revenue was ${segment_revenue:.1f} billion out of ${total_revenue:.1f} billion total."
+        if metric_type == 'operating_margin':
+            answer = f"{company_name} had the highest {metric_name} at {highest_value} in {year}"
+        else:
+            answer = f"{company_name} had the highest {metric_name} at ${highest_value} billion in {year}"
         
-        reasoning = f"Calculated {segment_name} revenue percentage for {company_name} in {year}. "
-        reasoning += f"Based on segment revenue of ${segment_revenue:.1f}B and total revenue of ${total_revenue:.1f}B."
+        # Add context with other companies if available
+        if len(company_data) > 1:
+            sorted_companies = sorted(company_data.items(), key=lambda x: x[1]['numeric_value'], reverse=True)
+            if len(sorted_companies) > 1:
+                second_company, second_data = sorted_companies[1]
+                second_name = self.company_names.get(second_company, second_company)
+                second_value = second_data['value']
+                if metric_type == 'operating_margin':
+                    answer += f", followed by {second_name} at {second_value}"
+                else:
+                    answer += f", followed by {second_name} at ${second_value} billion"
         
-        enhanced_sources = [
-            SourceInfo(
-                company=company,
-                year=year,
-                excerpt=f"{segment_name.title()} revenue was ${segment_revenue:.1f} billion...",
-                page=18
-            ),
-            SourceInfo(
-                company=company,
-                year=year,
-                excerpt=f"Total revenue was ${total_revenue:.1f} billion...",
-                page=12
-            )
-        ]
+        answer += "."
+        
+        reasoning = f"Compared {metric_name} data for {len(company_data)} companies from their {year} financial filings."
         
         return SynthesisResult(
             query=query,
             answer=answer,
             reasoning=reasoning,
             sub_queries=sub_queries,
-            sources=enhanced_sources
-        )
-    
-    def _synthesize_ai_strategy_comparison(self, query: str, sub_queries: List[str], 
-                                         sources: List[SourceInfo]) -> SynthesisResult:
-        """Synthesize AI strategy comparison results."""
-        year_match = re.search(r'\b(20\d{2})\b', query)
-        year = year_match.group(1) if year_match else '2024'  # Default to 2024 for AI strategy
-        
-        # Get AI investments for all companies
-        company_ai_investments = {}
-        for company, years_data in self.demo_financial_data.items():
-            if year in years_data and 'ai_investment' in years_data[year]:
-                company_ai_investments[company] = years_data[year]['ai_investment']
-        
-        if not company_ai_investments:
-            return SynthesisResult(
-                query=query,
-                answer="Unable to find AI investment data for the requested year.",
-                reasoning="No AI investment data available for the specified year.",
-                sub_queries=sub_queries,
-                sources=sources
-            )
-        
-        sorted_companies = sorted(company_ai_investments.items(), key=lambda x: x[1], reverse=True)
-        
-        # Generate answer
-        company_names = {'MSFT': 'Microsoft', 'GOOGL': 'Google', 'NVDA': 'NVIDIA'}
-        
-        answer = f"AI investment comparison for {year}: "
-        investments_text = []
-        for company, investment in sorted_companies:
-            company_name = company_names.get(company, company)
-            investments_text.append(f"{company_name} invested ${investment:.1f} billion")
-        
-        answer += ", ".join(investments_text) + ". "
-        
-        highest_company = sorted_companies[0][0]
-        highest_investment = sorted_companies[0][1]
-        answer += f"{company_names.get(highest_company, highest_company)} led with the highest AI investment at ${highest_investment:.1f} billion."
-        
-        reasoning = f"Compared AI investments across {len(company_ai_investments)} companies for {year}. "
-        reasoning += f"Data extracted from 10-K filings and AI strategy disclosures."
-        
-        enhanced_sources = []
-        for company, investment in sorted_companies:
-            enhanced_sources.append(SourceInfo(
-                company=company,
-                year=year,
-                excerpt=f"AI and machine learning investments totaled ${investment:.1f} billion...",
-                page=25
-            ))
-        
-        return SynthesisResult(
-            query=query,
-            answer=answer,
-            reasoning=reasoning,
-            sub_queries=sub_queries,
-            sources=enhanced_sources
+            sources=relevant_sources
         )
     
     def format_json_output(self, synthesis_result: SynthesisResult) -> Dict[str, Any]:
