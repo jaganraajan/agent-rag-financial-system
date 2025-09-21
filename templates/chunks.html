@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Chunks - ChromaDB Inspector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 0; margin-bottom: 30px; border-radius: 10px; text-align: center; }
+        .nav { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .nav a { text-decoration: none; color: #667eea; margin-right: 20px; padding: 8px 16px; border-radius: 4px; transition: background-color 0.3s; }
+        .nav a:hover, .nav a.active { background-color: #667eea; color: white; }
+        
+        .filters { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .filter-group { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        .chunk-list { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        .chunk-item { border-bottom: 1px solid #eee; padding: 20px; }
+        .chunk-item:last-child { border-bottom: none; }
+        .chunk-header { display: flex; justify-content: between; align-items: flex-start; margin-bottom: 10px; }
+        .chunk-meta { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .meta-tag { background: #667eea; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; }
+        .chunk-text { background: #f9f9f9; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+        
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .error { background: #fee; color: #c33; padding: 15px; border-radius: 8px; border: 1px solid #fcc; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ChromaDB Inspector</h1>
+            <p>Browse and inspect document chunks</p>
+        </div>
+        
+        <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/chunks" class="active">Browse Chunks</a>
+            <a href="/search">Semantic Search</a>
+        </nav>
+        
+        <div class="filters">
+            <div class="filter-group">
+                <label>Section Type:</label>
+                <select id="sectionTypeFilter">
+                    <option value="">All Sections</option>
+                </select>
+                
+                <label>Limit:</label>
+                <select id="limitFilter">
+                    <option value="50">50 chunks</option>
+                    <option value="100" selected>100 chunks</option>
+                    <option value="500">500 chunks</option>
+                </select>
+                
+                <button onclick="loadChunks()" style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Load Chunks</button>
+            </div>
+        </div>
+        
+        <div id="chunkList" class="chunk-list">
+            <div class="loading">Loading chunks...</div>
+        </div>
+    </div>
+
+    <script>
+        let chunks = [];
+        
+        async function loadChunks() {
+            const sectionType = document.getElementById('sectionTypeFilter').value;
+            const limit = document.getElementById('limitFilter').value;
+            
+            const params = new URLSearchParams();
+            if (sectionType) params.append('section_type', sectionType);
+            if (limit) params.append('limit', limit);
+            
+            try {
+                document.getElementById('chunkList').innerHTML = '<div class="loading">Loading chunks...</div>';
+                
+                const response = await fetch(`/api/chunks?${params}`);
+                chunks = await response.json();
+                
+                displayChunks(chunks);
+                
+            } catch (error) {
+                document.getElementById('chunkList').innerHTML = `<div class="error">Error loading chunks: ${error.message}</div>`;
+            }
+        }
+        
+        function displayChunks(chunksToShow) {
+            const container = document.getElementById('chunkList');
+            
+            if (chunksToShow.length === 0) {
+                container.innerHTML = '<div class="loading">No chunks found</div>';
+                return;
+            }
+            
+            const html = chunksToShow.map((chunk, index) => `
+                <div class="chunk-item">
+                    <div class="chunk-header">
+                        <h4>Chunk ${index + 1}</h4>
+                    </div>
+                    <div class="chunk-meta">
+                        <span class="meta-tag">Tokens: ${chunk.metadata.token_count || 'N/A'}</span>
+                        <span class="meta-tag">Section: ${chunk.metadata.section_title || 'N/A'}</span>
+                        <span class="meta-tag">Type: ${chunk.metadata.section_type || 'N/A'}</span>
+                        <span class="meta-tag">Content: ${chunk.metadata.content_type || 'N/A'}</span>
+                    </div>
+                    <div class="chunk-text">${chunk.text}</div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        async function loadSectionTypes() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                const select = document.getElementById('sectionTypeFilter');
+                if (stats.section_types) {
+                    Object.keys(stats.section_types).forEach(sectionType => {
+                        const option = document.createElement('option');
+                        option.value = sectionType;
+                        option.textContent = sectionType.charAt(0).toUpperCase() + sectionType.slice(1);
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading section types:', error);
+            }
+        }
+        
+        // Load initial data
+        loadSectionTypes();
+        loadChunks();
+    </script>
+</body>
+</html>

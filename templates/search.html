@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Search - ChromaDB Inspector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 0; margin-bottom: 30px; border-radius: 10px; text-align: center; }
+        .nav { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .nav a { text-decoration: none; color: #667eea; margin-right: 20px; padding: 8px 16px; border-radius: 4px; transition: background-color 0.3s; }
+        .nav a:hover, .nav a.active { background-color: #667eea; color: white; }
+        
+        .search-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .search-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; margin-bottom: 15px; }
+        .search-controls { display: flex; gap: 15px; align-items: center; }
+        .search-button { background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .search-button:hover { background: #5a6fd8; }
+        
+        .results { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        .result-item { border-bottom: 1px solid #eee; padding: 20px; }
+        .result-item:last-child { border-bottom: none; }
+        .result-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .similarity-score { background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .result-meta { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .meta-tag { background: #667eea; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; }
+        .result-text { background: #f9f9f9; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 13px; line-height: 1.4; white-space: pre-wrap; }
+        
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .error { background: #fee; color: #c33; padding: 15px; border-radius: 8px; border: 1px solid #fcc; margin: 20px 0; }
+        .no-results { text-align: center; padding: 40px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ChromaDB Inspector</h1>
+            <p>Semantic search through document chunks</p>
+        </div>
+        
+        <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/chunks">Browse Chunks</a>
+            <a href="/search" class="active">Semantic Search</a>
+        </nav>
+        
+        <div class="search-box">
+            <input type="text" id="searchInput" class="search-input" placeholder="Enter your search query..." />
+            <div class="search-controls">
+                <label>Results:</label>
+                <select id="topKSelect">
+                    <option value="5" selected>Top 5</option>
+                    <option value="10">Top 10</option>
+                    <option value="20">Top 20</option>
+                </select>
+                
+                <button class="search-button" onclick="performSearch()">Search</button>
+            </div>
+        </div>
+        
+        <div id="results" class="results" style="display: none;">
+            <div class="loading">Searching...</div>
+        </div>
+    </div>
+
+    <script>
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const topK = document.getElementById('topKSelect').value;
+            
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+            
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = '<div class="loading">Searching...</div>';
+            
+            try {
+                const params = new URLSearchParams({
+                    query: query,
+                    top_k: topK
+                });
+                
+                const response = await fetch(`/api/search?${params}`);
+                const results = await response.json();
+                
+                displayResults(results);
+                
+            } catch (error) {
+                resultsContainer.innerHTML = `<div class="error">Error performing search: ${error.message}</div>`;
+            }
+        }
+        
+        function displayResults(results) {
+            const container = document.getElementById('results');
+            
+            if (results.length === 0) {
+                container.innerHTML = '<div class="no-results">No similar chunks found</div>';
+                return;
+            }
+            
+            const html = results.map((result, index) => `
+                <div class="result-item">
+                    <div class="result-header">
+                        <h4>Result ${index + 1}</h4>
+                        <div class="similarity-score">${(result.similarity * 100).toFixed(1)}% match</div>
+                    </div>
+                    <div class="result-meta">
+                        <span class="meta-tag">Section: ${result.metadata.section_title || 'N/A'}</span>
+                        <span class="meta-tag">Type: ${result.metadata.section_type || 'N/A'}</span>
+                        <span class="meta-tag">Content: ${result.metadata.content_type || 'N/A'}</span>
+                        <span class="meta-tag">Tokens: ${result.metadata.token_count || 'N/A'}</span>
+                    </div>
+                    <div class="result-text">${result.text}</div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        // Allow search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    </script>
+</body>
+</html>
