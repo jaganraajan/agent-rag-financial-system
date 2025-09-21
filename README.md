@@ -1,6 +1,37 @@
 # Agent RAG Financial System
 
-A comprehensive financial analysis system that combines RAG (Retrieval-Augmented Generation) capabilities with a web scraper for SEC EDGAR 10-K filings. The system can process SEC filings, create searchable vector embeddings, and answer financial questions about Google, Microsoft, and NVIDIA using their recent 10-K filings.
+A comprehensive financial analysis system that combines **Enhanced RAG (Retrieval-Augmented Generation)** capabilities with **LangGraph query decomposition** and a web scraper for SEC EDGAR 10-K filings. The system processes SEC filings, creates searchable vector embeddings, and provides intelligent answers to complex financial questions about Google, Microsoft, and NVIDIA using their recent 10-K filings.
+
+## 🚀 New Features with LangGraph Integration
+
+### 🧠 Query Decomposition
+- **Automatic Question Breaking**: Complex questions are automatically decomposed into simpler sub-queries
+- **Multi-step Retrieval**: Executes multiple targeted searches for comprehensive answers
+- **Comparative Analysis**: Handles "which company" and comparison questions intelligently
+
+### 📊 Enhanced Query Types
+- **Comparative Queries**: "Which company had the highest operating margin in 2023?"
+- **Multi-Company Analysis**: "Compare Microsoft and Google revenue"
+- **Temporal Analysis**: "What was NVIDIA's growth from 2022 to 2023?"
+
+### 📋 Structured JSON Output
+```json
+{
+  "query": "Which company had the highest operating margin in 2023?",
+  "answer": "MSFT had the highest operating margin at 42.1% in 2023, followed by NVDA at 32.1%",
+  "reasoning": "Retrieved operating margins for 3 companies from their 2023 10-K filings...",
+  "sub_queries": ["MSFT operating margin 2023", "GOOGL operating margin 2023", "NVDA operating margin 2023"],
+  "sources": [
+    {
+      "company": "MSFT",
+      "year": "2023", 
+      "excerpt": "Operating margin was 42.1%...",
+      "page": 10
+    }
+  ],
+  "confidence": 0.9
+}
+```
 
 ## Features
 
@@ -10,20 +41,24 @@ A comprehensive financial analysis system that combines RAG (Retrieval-Augmented
 - Robust error handling and retry logic
 - Demo mode for offline testing
 
-### 🤖 RAG Pipeline
+### 🤖 Enhanced RAG Pipeline
+- **Query Decomposition**: LangGraph-powered analysis of complex questions
+- **Multi-step Retrieval**: Executes multiple targeted sub-queries
+- **Synthesis Engine**: Combines results with reasoning and confidence scoring
 - **Text Extraction**: Parses HTML filings and extracts clean text
 - **Semantic Chunking**: Splits documents into 50-1000 token chunks with semantic boundaries
 - **Embeddings**: Uses Azure OpenAI embeddings (with offline mock fallback)
 - **Vector Storage**: ChromaDB for efficient similarity search
-- **Query Interface**: Both single-query and interactive modes
+- **Dual Interface**: Enhanced JSON output and traditional query modes
 - **Metadata**: Extracts company, year, and filing information
 
 ### 💡 Key Capabilities
-- Process and index multiple SEC filings simultaneously
-- Semantic search across financial documents
-- Company-specific and cross-company queries
-- Real-time similarity scoring
-- Persistent vector storage
+- **Intelligent Question Analysis**: Automatically detects comparative, temporal, and simple queries
+- **Multi-Company Comparisons**: Handles cross-company financial analysis
+- **Structured Reasoning**: Provides explanations for how answers were derived
+- **Source Attribution**: Tracks and cites specific document sections
+- **Confidence Scoring**: Assigns confidence levels to generated answers
+- **Fallback Support**: Gracefully handles errors with basic RAG fallback
 
 - **SEC EDGAR Web Scraper**: Automated downloading of 10-K filings from the SEC EDGAR database
 - **Multi-Company Support**: Covers Google (GOOGL), Microsoft (MSFT), and NVIDIA (NVDA)
@@ -87,11 +122,32 @@ python main.py rag --process --input-dir demo_filings
 
 #### 3. Query the System
 ```bash
-# Single query
-python main.py rag --query "What are the main risk factors?"
+# Enhanced comparative queries (new!)
+python main.py rag --query "Which company had the highest operating margin in 2023?"
+
+# Multi-company comparisons
+python main.py rag --query "Compare Microsoft and Google revenue"
+
+# Traditional single queries
+python main.py rag --query "What are NVIDIA's main risk factors?"
 
 # Interactive mode
 python main.py rag
+```
+
+#### 🆕 Enhanced Query Examples
+```bash
+# Operating margin comparison
+python main.py rag --query "Which company had the highest operating margin in 2023?"
+
+# Revenue analysis
+python main.py rag --query "Compare MSFT and GOOGL revenue in 2022"
+
+# Growth analysis  
+python main.py rag --query "What was NVIDIA's growth rate from 2022 to 2023?"
+
+# Force basic mode (without LangGraph features)
+python main.py rag --basic --query "Your question"
 ```
 
 ### 📊 SEC Scraper Mode
@@ -130,15 +186,27 @@ python main.py rag --vector-store ./my_vector_db --process
 
 ```
 agent-rag-financial-system/
-├── README.md                    # Project documentation
-├── requirements.txt             # Python dependencies (includes RAG libraries)
+├── README.md                    # Project documentation  
+├── requirements.txt             # Python dependencies (includes LangGraph)
 ├── .gitignore                  # Git ignore rules
-├── main.py                     # Main CLI interface (scraper + RAG modes)
-├── sec_edgar_scraper.py        # SEC EDGAR scraper implementation
-├── rag_pipeline.py             # RAG pipeline components
+├── main.py                     # Main CLI interface (enhanced + basic modes)
+├── sec_edgar_scraper.py        # SEC EDGAR scraper implementation  
+├── rag_pipeline.py             # Original RAG pipeline components
 ├── demo_scraper.py            # Demo/mock version for testing
-├── test_scraper.py            # Basic scraper functionality tests
-├── test_rag_system.py         # Comprehensive RAG system tests
+├── src/                       # Organized source code structure
+│   ├── agents/                # LangGraph agents and enhanced RAG
+│   │   ├── query_decomposer.py     # Query decomposition with LangGraph
+│   │   ├── synthesis_engine.py     # Result synthesis and reasoning
+│   │   └── enhanced_rag.py         # Enhanced RAG pipeline orchestrator
+│   ├── rag/                   # Core RAG components
+│   │   └── rag_pipeline.py         # Original RAG pipeline (moved)
+│   ├── scrapers/              # Web scraping modules
+│   │   ├── sec_edgar_scraper.py    # SEC scraper (moved)
+│   │   └── demo_scraper.py         # Demo scraper (moved)
+│   └── utils/                 # Utility functions
+├── tests/                     # Test modules
+│   ├── test_scraper.py            # Basic scraper functionality tests
+│   └── test_rag_system.py         # Comprehensive RAG system tests
 ├── filings/                   # Downloaded 10-K filings (created on scrape)
 ├── demo_filings/              # Demo filings (created by demo_scraper.py)
 └── vector_db/                 # ChromaDB vector store (created on RAG processing)
@@ -190,9 +258,17 @@ demo_filings/
 
 ### Dependencies
 
+#### Core RAG Dependencies
 - `chromadb>=0.4.15` - Vector database for embeddings
 - `openai>=1.0.0` - Azure OpenAI API integration
 - `tiktoken>=0.5.0` - Token counting and text processing
+
+#### Enhanced LangGraph Dependencies (New!)
+- `langgraph>=0.6.0` - LangGraph workflow orchestration
+- `langchain>=0.3.0` - LangChain core components
+- `langchain-openai>=0.3.0` - LangChain OpenAI integration
+
+#### Web Scraping Dependencies
 - `requests>=2.31.0` - HTTP requests to SEC API
 - `pandas>=2.0.0` - Data manipulation
 - `beautifulsoup4>=4.12.0` - HTML parsing for SEC pages

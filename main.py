@@ -11,9 +11,19 @@ import os
 import sys
 import argparse
 import logging
+import json
 from datetime import datetime
 from sec_edgar_scraper import SECEdgarScraper
-from rag_pipeline import RAGPipeline
+
+# Try to import enhanced RAG, fall back to basic if not available
+try:
+    sys.path.append('src')
+    from src.agents.enhanced_rag import EnhancedRAGPipeline
+    ENHANCED_RAG_AVAILABLE = True
+except ImportError:
+    from rag_pipeline import RAGPipeline
+    ENHANCED_RAG_AVAILABLE = False
+    print("Enhanced RAG not available, using basic RAG pipeline")
 
 
 def setup_logging(level=logging.INFO):
@@ -97,7 +107,12 @@ def run_rag_mode(args):
     
     # Initialize RAG pipeline
     try:
-        rag = RAGPipeline(vector_store_path=args.vector_store)
+        if ENHANCED_RAG_AVAILABLE:
+            rag = EnhancedRAGPipeline(vector_store_path=args.vector_store)
+            print("🚀 Using Enhanced RAG with LangGraph")
+        else:
+            rag = RAGPipeline(vector_store_path=args.vector_store)
+            print("📊 Using Basic RAG Pipeline")
         
         if args.process:
             # Process documents
@@ -120,24 +135,34 @@ def run_rag_mode(args):
         if args.query:
             # Single query mode
             print(f"Query: {args.query}")
-            print("-" * 50)
+            print("=" * 60)
             
-            result = rag.query(args.query, top_k=args.top_k)
-            
-            if 'error' in result:
-                print(f"❌ Error: {result['error']}")
-                return
-            
-            print(f"Found {len(result['results'])} relevant chunks:")
-            print()
-            
-            for i, chunk in enumerate(result['results'], 1):
-                print(f"Result {i} (Similarity: {chunk['similarity']:.3f}):")
-                print(f"Company: {chunk['metadata'].get('company', 'Unknown')}")
-                print(f"Year: {chunk['metadata'].get('year', 'Unknown')}")
-                print(f"Text: {chunk['text'][:200]}...")
-                print("-" * 30)
+            if ENHANCED_RAG_AVAILABLE:
+                # Use enhanced query with JSON output
+                result = rag.query(args.query, top_k=args.top_k, return_json=True)
+                
+                print("\n📋 Enhanced Query Result (JSON):")
+                print("=" * 40)
+                print(json.dumps(result, indent=2))
+                
+            else:
+                # Use basic query  
+                result = rag.query(args.query, top_k=args.top_k)
+                
+                if 'error' in result:
+                    print(f"❌ Error: {result['error']}")
+                    return
+                
+                print(f"Found {len(result['results'])} relevant chunks:")
                 print()
+                
+                for i, chunk in enumerate(result['results'], 1):
+                    print(f"Result {i} (Similarity: {chunk['similarity']:.3f}):")
+                    print(f"Company: {chunk['metadata'].get('company', 'Unknown')}")
+                    print(f"Year: {chunk['metadata'].get('year', 'Unknown')}")
+                    print(f"Text: {chunk['text'][:200]}...")
+                    print("-" * 30)
+                    print()
         
         elif not args.process:
             # Interactive query mode
@@ -243,6 +268,10 @@ Examples:
                            help='Single query to execute')
     rag_parser.add_argument('--top-k', type=int, default=5,
                            help='Number of top results to return (default: 5)')
+    rag_parser.add_argument('--enhanced', action='store_true', default=True,
+                           help='Use enhanced RAG with LangGraph (default: True if available)')
+    rag_parser.add_argument('--basic', action='store_true',
+                           help='Force use of basic RAG pipeline')
     
     # Global options
     parser.add_argument('--verbose', '-v', action='store_true',
