@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChromaDB Inspector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .nav {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .nav a {
+            text-decoration: none;
+            color: #667eea;
+            margin-right: 20px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .nav a:hover, .nav a.active {
+            background-color: #667eea;
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .distribution-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .distribution-item:last-child {
+            border-bottom: none;
+        }
+        
+        .distribution-bar {
+            height: 6px;
+            background: #667eea;
+            border-radius: 3px;
+            margin-left: 10px;
+            flex-grow: 1;
+            max-width: 200px;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #fcc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ChromaDB Inspector</h1>
+            <p>Inspect and analyze your RAG document chunks</p>
+        </div>
+        
+        <nav class="nav">
+            <a href="/" class="active">Dashboard</a>
+            <a href="/chunks">Browse Chunks</a>
+            <a href="/search">Semantic Search</a>
+        </nav>
+        
+        {% if stats.error %}
+            <div class="error">
+                <strong>Error:</strong> {{ stats.error }}
+            </div>
+        {% else %}
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>📊 Collection Overview</h3>
+                    <div class="stat-value">{{ stats.total_chunks }}</div>
+                    <div class="stat-label">Total Chunks</div>
+                </div>
+                
+                {% if stats.token_stats %}
+                <div class="stat-card">
+                    <h3>🔤 Token Statistics</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <div class="stat-value" style="font-size: 20px;">{{ "%.1f"|format(stats.token_stats.avg) }}</div>
+                            <div class="stat-label">Avg Tokens</div>
+                        </div>
+                        <div>
+                            <div class="stat-value" style="font-size: 20px;">{{ stats.token_stats.total }}</div>
+                            <div class="stat-label">Total Tokens</div>
+                        </div>
+                        <div>
+                            <div class="stat-value" style="font-size: 20px;">{{ stats.token_stats.min }}</div>
+                            <div class="stat-label">Min Tokens</div>
+                        </div>
+                        <div>
+                            <div class="stat-value" style="font-size: 20px;">{{ stats.token_stats.max }}</div>
+                            <div class="stat-label">Max Tokens</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if stats.section_types %}
+            <div class="chart-container">
+                <h3>📑 Content by Section Type</h3>
+                {% for section_type, count in stats.section_types.items() %}
+                <div class="distribution-item">
+                    <span>{{ section_type.title() }} ({{ count }})</span>
+                    <div class="distribution-bar" style="width: {{ (count / stats.total_chunks * 100) }}%;"></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if stats.content_types %}
+            <div class="chart-container">
+                <h3>📄 Content by Type</h3>
+                {% for content_type, count in stats.content_types.items() %}
+                <div class="distribution-item">
+                    <span>{{ content_type.replace('_', ' ').title() }} ({{ count }})</span>
+                    <div class="distribution-bar" style="width: {{ (count / stats.total_chunks * 100) }}%;"></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>

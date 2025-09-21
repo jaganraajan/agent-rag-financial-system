@@ -27,7 +27,7 @@ class TextExtractor:
         self.logger = logging.getLogger(__name__)
     
     def extract_text_from_html(self, file_path: str) -> str:
-        """Extract clean text from HTML filing."""
+        """Extract clean text from HTML filing with preserved structure."""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -39,8 +39,8 @@ class TextExtractor:
             for script in soup(["script", "style"]):
                 script.decompose()
             
-            # Extract text
-            text = soup.get_text()
+            # Extract structured text preserving document hierarchy
+            text = self._extract_structured_text(soup)
             
             # Clean up text
             text = self._clean_text(text)
@@ -50,6 +50,109 @@ class TextExtractor:
         except Exception as e:
             self.logger.error(f"Error extracting text from {file_path}: {e}")
             return ""
+    
+    def _extract_structured_text(self, soup: BeautifulSoup) -> str:
+        """Extract text while preserving document structure for 10-K filings."""
+        text_parts = []
+        
+        # Look for common 10-K structural elements in document order
+        processed_elements = set()
+        
+        # First pass: collect all structural elements
+        all_elements = soup.find_all(['h1', 'h2', 'h3', 'h4', 'div', 'p', 'table', 'ul', 'ol'])
+        
+        for element in all_elements:
+            # Skip if already processed (to avoid duplication)
+            if id(element) in processed_elements:
+                continue
+            
+            if element.name in ['h1', 'h2', 'h3', 'h4']:
+                # Add section headers with clear markers
+                level = element.name[1]  # Extract number from h1, h2, etc.
+                header_text = element.get_text(strip=True)
+                if header_text and len(header_text) > 3:  # Filter out short headers
+                    marker = "\n" + "=" * max(20, 60 - int(level) * 10) + "\n"
+                    text_parts.append(f"{marker}SECTION_{level}: {header_text}{marker}")
+                processed_elements.add(id(element))
+            
+            elif element.name == 'table':
+                # Check if this table is inside another element we'll process
+                parent_table = element.find_parent('table')
+                if parent_table and id(parent_table) not in processed_elements:
+                    continue  # Skip nested tables, process parent instead
+                
+                # Special handling for financial tables
+                table_text = self._extract_table_text(element)
+                if table_text and len(table_text.strip()) > 50:  # Only significant tables
+                    text_parts.append(f"\n[FINANCIAL_TABLE]\n{table_text}\n[/FINANCIAL_TABLE]\n")
+                processed_elements.add(id(element))
+            
+            elif element.name in ['p', 'div']:
+                # Skip if this element is inside a table or header we already processed
+                parent_processed = False
+                for parent in element.parents:
+                    if id(parent) in processed_elements:
+                        parent_processed = True
+                        break
+                
+                if not parent_processed:
+                    para_text = element.get_text(strip=True)
+                    if para_text and len(para_text) > 20:  # Filter out short/empty elements
+                        text_parts.append(para_text)
+                    processed_elements.add(id(element))
+            
+            elif element.name in ['ul', 'ol']:
+                # Skip if parent already processed
+                parent_processed = False
+                for parent in element.parents:
+                    if id(parent) in processed_elements:
+                        parent_processed = True
+                        break
+                
+                if not parent_processed:
+                    list_text = self._extract_list_text(element)
+                    if list_text:
+                        text_parts.append(list_text)
+                    processed_elements.add(id(element))
+        
+        return '\n\n'.join(text_parts)
+    
+    def _extract_table_text(self, table) -> str:
+        """Extract structured text from financial tables."""
+        rows = []
+        
+        # Extract table headers
+        headers = []
+        for header in table.find_all(['th']):
+            header_text = header.get_text(strip=True)
+            if header_text:
+                headers.append(header_text)
+        
+        if headers:
+            rows.append(" | ".join(headers))
+            rows.append("-" * 50)  # Separator line
+        
+        # Extract table data
+        for row in table.find_all('tr'):
+            cells = []
+            for cell in row.find_all(['td', 'th']):
+                cell_text = cell.get_text(strip=True)
+                cells.append(cell_text if cell_text else "")
+            
+            if cells and any(cell.strip() for cell in cells):  # Skip empty rows
+                rows.append(" | ".join(cells))
+        
+        return '\n'.join(rows) if rows else ""
+    
+    def _extract_list_text(self, list_element) -> str:
+        """Extract text from list elements."""
+        items = []
+        for item in list_element.find_all('li'):
+            item_text = item.get_text(strip=True)
+            if item_text:
+                items.append(f"• {item_text}")
+        
+        return '\n'.join(items) if items else ""
     
     def _clean_text(self, text: str) -> str:
         """Clean and normalize extracted text."""
@@ -66,7 +169,7 @@ class TextExtractor:
 
 
 class TextChunker:
-    """Split text into semantic chunks with token limits."""
+    """Split text into semantic chunks with token limits, optimized for 10-K filings."""
     
     def __init__(self, min_tokens: int = 50, max_tokens: int = 1000, model: str = "cl100k_base"):
         self.min_tokens = min_tokens
@@ -94,14 +197,185 @@ class TextChunker:
             return int(words * 0.75)
     
     def chunk_text(self, text: str, metadata: Optional[Dict] = None) -> List[Dict]:
-        """Split text into chunks with token limits."""
+        """Split text into chunks with token limits, respecting 10-K document structure."""
+        chunks = []
+        
+        # First, identify and extract sections
+        sections = self._identify_sections(text)
+        
+        for section in sections:
+            section_chunks = self._chunk_section(section, metadata)
+            chunks.extend(section_chunks)
+        
+        return chunks
+    
+    def _identify_sections(self, text: str) -> List[Dict]:
+        """Identify major sections in 10-K filings."""
+        sections = []
+        current_section = ""
+        current_section_title = ""
+        current_section_level = 0
+        
+        lines = text.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            
+            # Check for section headers
+            if line.startswith('SECTION_'):
+                # Save previous section if it exists
+                if current_section.strip():
+                    sections.append({
+                        'title': current_section_title,
+                        'content': current_section.strip(),
+                        'level': current_section_level,
+                        'type': self._classify_section_type(current_section_title)
+                    })
+                
+                # Start new section
+                level_match = line.split('SECTION_')[1].split(':')[0]
+                current_section_level = int(level_match) if level_match.isdigit() else 1
+                current_section_title = line.split(':', 1)[1].strip() if ':' in line else line
+                current_section = ""
+            
+            elif line.startswith('='):
+                # Skip section dividers
+                continue
+            
+            else:
+                # Add content to current section
+                if line:
+                    current_section += line + '\n'
+        
+        # Add final section
+        if current_section.strip():
+            sections.append({
+                'title': current_section_title,
+                'content': current_section.strip(),
+                'level': current_section_level,
+                'type': self._classify_section_type(current_section_title)
+            })
+        
+        # If no sections found, treat entire text as one section
+        if not sections:
+            sections.append({
+                'title': 'Document Content',
+                'content': text,
+                'level': 1,
+                'type': 'general'
+            })
+        
+        return sections
+    
+    def _classify_section_type(self, title: str) -> str:
+        """Classify the type of section based on title."""
+        title_lower = title.lower()
+        
+        if any(keyword in title_lower for keyword in ['financial', 'statement', 'income', 'balance', 'cash flow']):
+            return 'financial'
+        elif any(keyword in title_lower for keyword in ['risk', 'factor']):
+            return 'risk'
+        elif any(keyword in title_lower for keyword in ['business', 'overview', 'operation']):
+            return 'business'
+        elif any(keyword in title_lower for keyword in ['legal', 'proceeding', 'litigation']):
+            return 'legal'
+        elif any(keyword in title_lower for keyword in ['management', 'discussion', 'analysis', 'md&a']):
+            return 'mda'
+        else:
+            return 'general'
+    
+    def _chunk_section(self, section: Dict, metadata: Optional[Dict] = None) -> List[Dict]:
+        """Chunk a single section while preserving context."""
+        content = section['content']
+        section_chunks = []
+        
+        # Handle financial tables specially
+        if '[FINANCIAL_TABLE]' in content:
+            table_chunks = self._chunk_financial_tables(content, section, metadata)
+            section_chunks.extend(table_chunks)
+            
+            # Remove tables from content for regular processing
+            content = re.sub(r'\[FINANCIAL_TABLE\].*?\[/FINANCIAL_TABLE\]', '', content, flags=re.DOTALL)
+        
+        # Process remaining content
+        if content.strip():
+            regular_chunks = self._chunk_regular_content(content, section, metadata)
+            section_chunks.extend(regular_chunks)
+        
+        return section_chunks
+    
+    def _chunk_financial_tables(self, content: str, section: Dict, metadata: Optional[Dict] = None) -> List[Dict]:
+        """Handle financial tables as separate chunks."""
+        chunks = []
+        
+        # Extract all tables
+        table_pattern = r'\[FINANCIAL_TABLE\](.*?)\[/FINANCIAL_TABLE\]'
+        tables = re.findall(table_pattern, content, re.DOTALL)
+        
+        for i, table_content in enumerate(tables):
+            table_content = table_content.strip()
+            if not table_content:
+                continue
+            
+            # Create chunk metadata
+            chunk_metadata = {
+                'section_title': section['title'],
+                'section_level': section['level'],
+                'section_type': section['type'],
+                'content_type': 'financial_table',
+                'table_index': i
+            }
+            
+            if metadata:
+                chunk_metadata.update(metadata)
+            
+            # Check token count and split if necessary
+            table_tokens = self._count_tokens(table_content)
+            
+            if table_tokens <= self.max_tokens:
+                chunks.append(self._create_chunk(table_content, chunk_metadata))
+            else:
+                # Split large tables by rows
+                table_rows = table_content.split('\n')
+                current_chunk = ""
+                current_tokens = 0
+                
+                for row in table_rows:
+                    row_tokens = self._count_tokens(row)
+                    
+                    if current_tokens + row_tokens > self.max_tokens and current_chunk:
+                        chunks.append(self._create_chunk(current_chunk.strip(), chunk_metadata))
+                        current_chunk = row + '\n'
+                        current_tokens = row_tokens
+                    else:
+                        current_chunk += row + '\n'
+                        current_tokens += row_tokens
+                
+                if current_chunk.strip():
+                    chunks.append(self._create_chunk(current_chunk.strip(), chunk_metadata))
+        
+        return chunks
+    
+    def _chunk_regular_content(self, content: str, section: Dict, metadata: Optional[Dict] = None) -> List[Dict]:
+        """Chunk regular text content within a section."""
         chunks = []
         
         # Split by paragraphs first for semantic boundaries
-        paragraphs = text.split('\n\n')
+        paragraphs = content.split('\n\n')
         
         current_chunk = ""
         current_tokens = 0
+        
+        # Create base metadata for this section
+        chunk_metadata = {
+            'section_title': section['title'],
+            'section_level': section['level'],
+            'section_type': section['type'],
+            'content_type': 'text'
+        }
+        
+        if metadata:
+            chunk_metadata.update(metadata)
         
         for paragraph in paragraphs:
             paragraph = paragraph.strip()
@@ -118,7 +392,7 @@ class TextChunker:
                     
                     if current_tokens + sentence_tokens > self.max_tokens:
                         if current_tokens >= self.min_tokens:
-                            chunks.append(self._create_chunk(current_chunk, metadata))
+                            chunks.append(self._create_chunk(current_chunk, chunk_metadata))
                             current_chunk = sentence
                             current_tokens = sentence_tokens
                         else:
@@ -134,7 +408,7 @@ class TextChunker:
                 # Check if adding this paragraph exceeds max tokens
                 if current_tokens + paragraph_tokens > self.max_tokens:
                     if current_tokens >= self.min_tokens:
-                        chunks.append(self._create_chunk(current_chunk, metadata))
+                        chunks.append(self._create_chunk(current_chunk, chunk_metadata))
                         current_chunk = paragraph
                         current_tokens = paragraph_tokens
                     else:
@@ -149,7 +423,7 @@ class TextChunker:
         
         # Add final chunk if it meets minimum requirements
         if current_chunk and current_tokens >= self.min_tokens:
-            chunks.append(self._create_chunk(current_chunk, metadata))
+            chunks.append(self._create_chunk(current_chunk, chunk_metadata))
         
         return chunks
     
