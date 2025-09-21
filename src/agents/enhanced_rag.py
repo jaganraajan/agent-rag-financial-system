@@ -148,17 +148,50 @@ class EnhancedRAGPipeline:
                 sources.append(source)
                 total_results += 1
         
-        # Create simple synthesis
+        # Create synthesis using Azure OpenAI LLM
         if sources:
-            # Focus on highest similarity source
-            best_source = max(sources, key=lambda x: x.similarity)
-            answer = f"Based on the retrieved information from {best_source.company} ({best_source.year}), "
-            answer += f"relevant details have been found. Analysis includes {total_results} relevant document sections."
+            # Prepare context for LLM
+            context_chunks = "\n\n".join([s.excerpt for s in sources[:5]])
+            prompt = (
+                f"You are a financial analyst assistant. "
+                f"Given the following SEC filing excerpts, answer the user's question as precisely as possible. "
+                f"If you find a specific value, include it in your answer.\n\n"
+                f"Question: {query}\n\n"
+                f"SEC Filing Excerpts:\n{context_chunks}"
+            )
+
+            # Call Azure OpenAI
+            try:
+                from openai import AzureOpenAI
+                import os
+                azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+                api_key = os.getenv('AZURE_OPENAI_API_KEY')
+                api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-01')
+                model = os.getenv('AZURE_OPENAI_MODEL', 'gpt-4o-mini')
+                client = AzureOpenAI(
+                    azure_endpoint=azure_endpoint,
+                    api_key=api_key,
+                    api_version=api_version
+                )
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a financial analyst assistant."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.2,
+                    max_tokens=256
+                )
+                answer = response.choices[0].message.content.strip()
+            except Exception as e:
+                answer = f"LLM call failed: {e}. Falling back to best retrieved chunk."
+                best_source = max(sources, key=lambda x: x.similarity)
+                answer += f" Based on the retrieved information from {best_source.company} ({best_source.year}), relevant details have been found. Analysis includes {total_results} relevant document sections."
         else:
             answer = "No specific information was found for the query."
-        
+
         reasoning = f"Retrieved information from {len(sources)} document sections using {len(sub_queries)} targeted searches."
-        
+
         return SynthesisResult(
             query=query,
             answer=answer,
