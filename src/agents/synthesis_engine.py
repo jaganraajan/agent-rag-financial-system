@@ -46,21 +46,40 @@ class SynthesisEngine:
             'operating_margin': [
                 r'operating\s+margin[:\s]*(\d+\.?\d*)%?',
                 r'operating\s+income\s+margin[:\s]*(\d+\.?\d*)%?',
-                r'(\d+\.?\d*)%?\s*operating\s+margin'
+                r'(\d+\.?\d*)%?\s*operating\s+margin',
+                r'operating\s+margin:\s*(\d+\.?\d*)%',
+                r'operating\s+margin\s+was\s+(\d+\.?\d*)%'
             ],
             'revenue': [
                 r'revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
                 r'total\s+revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
-                r'net\s+revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?'
+                r'net\s+revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
+                r'total\s+revenue:\s*\$(\d+\.?\d*)\s*(billion|million|trillion)?',
+                r'revenue\s+was\s+\$(\d+\.?\d*)\s*(billion|million|trillion)?'
+            ],
+            'growth': [
+                r'growth[:\s]*(\d+\.?\d*)%?',
+                r'revenue\s+growth[:\s]*(\d+\.?\d*)%?',
+                r'(\d+\.?\d*)%?\s*growth',
+                r'growth:\s*(\d+\.?\d*)%',
+                r'growth\s+was\s+(\d+\.?\d*)%'
             ],
             'profit': [
                 r'net\s+income[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
                 r'profit[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
                 r'net\s+profit[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?'
+            ],
+            'cloud_revenue': [
+                r'cloud\s+(?:services\s+)?revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
+                r'cloud\s+(?:services\s+)?revenue:\s*\$(\d+\.?\d*)\s*(billion|million|trillion)?'
+            ],
+            'datacenter_revenue': [
+                r'data\s+center\s+revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?',
+                r'datacenter\s+revenue[:\s]*\$?(\d+\.?\d*)\s*(billion|million|trillion)?'
             ]
         }
         
-        # Sample financial data for demonstration (since demo files are mock)
+        # Keep demo financial data as fallback only
         self.demo_financial_data = {
             'MSFT': {
                 '2023': {
@@ -106,6 +125,158 @@ class SynthesisEngine:
             }
         }
     
+    def _extract_metric_from_sources(self, sources: List[SourceInfo], metric: str, 
+                                   company: Optional[str] = None, year: Optional[str] = None) -> Optional[float]:
+        """Extract a specific metric from source texts using regex patterns.
+        
+        Args:
+            sources: List of source documents
+            metric: Type of metric to extract (e.g., 'operating_margin', 'revenue')
+            company: Optional company filter
+            year: Optional year filter
+            
+        Returns:
+            Extracted metric value or None if not found
+        """
+        patterns = self.metric_patterns.get(metric, [])
+        
+        for source in sources:
+            # Filter by company and year if specified
+            if company and source.company != company:
+                continue
+            if year and source.year != year:
+                continue
+            
+            # Use the full text from the excerpt, but also try to get the original full text
+            # The excerpt might be truncated, so we need the full text for better extraction
+            text = source.excerpt.lower()
+            
+            for pattern in patterns:
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                if matches:
+                    try:
+                        # Handle different match formats
+                        if isinstance(matches[0], tuple):
+                            # Handle cases like ('42.1', 'billion')
+                            value = float(matches[0][0])
+                            unit = matches[0][1] if len(matches[0]) > 1 else ''
+                            
+                            # Convert to standard units if needed
+                            if unit.lower() == 'million':
+                                value = value / 1000  # Convert to billions
+                            elif unit.lower() == 'trillion':
+                                value = value * 1000  # Convert to billions
+                        else:
+                            # Handle simple numeric matches
+                            value = float(matches[0])
+                        
+                        self.logger.info(f"Extracted {metric} = {value} for {source.company} {source.year}")
+                        return value
+                    except (ValueError, IndexError) as e:
+                        self.logger.debug(f"Failed to parse {metric} from {matches}: {e}")
+                        continue
+        
+        return None
+    
+    def _extract_metric_from_rag_results(self, rag_results: List[Dict], metric: str, 
+                                       company: Optional[str] = None, year: Optional[str] = None) -> Optional[float]:
+        """Extract a specific metric directly from RAG results (using full text).
+        
+        Args:
+            rag_results: Raw RAG results with full text
+            metric: Type of metric to extract
+            company: Optional company filter
+            year: Optional year filter
+            
+        Returns:
+            Extracted metric value or None if not found
+        """
+        patterns = self.metric_patterns.get(metric, [])
+        
+        for result in rag_results:
+            if 'results' not in result:
+                continue
+                
+            for item in result.get('results', []):
+                metadata = item.get('metadata', {})
+                item_company = metadata.get('company', 'Unknown')
+                item_year = metadata.get('year', 'Unknown')
+                
+                # Filter by company and year if specified
+                if company and item_company != company:
+                    continue
+                if year and item_year != year:
+                    continue
+                
+                # Use the full text for better extraction
+                full_text = item.get('text', '').lower()
+                
+                for pattern in patterns:
+                    matches = re.findall(pattern, full_text, re.IGNORECASE)
+                    if matches:
+                        try:
+                            # Handle different match formats
+                            if isinstance(matches[0], tuple):
+                                # Handle cases like ('42.1', 'billion')
+                                value = float(matches[0][0])
+                                unit = matches[0][1] if len(matches[0]) > 1 else ''
+                                
+                                # Convert to standard units if needed
+                                if unit.lower() == 'million':
+                                    value = value / 1000  # Convert to billions
+                                elif unit.lower() == 'trillion':
+                                    value = value * 1000  # Convert to billions
+                            else:
+                                # Handle simple numeric matches
+                                value = float(matches[0])
+                            
+                            self.logger.info(f"Extracted {metric} = {value} for {item_company} {item_year} from full text")
+                            return value
+                        except (ValueError, IndexError) as e:
+                            self.logger.debug(f"Failed to parse {metric} from {matches}: {e}")
+                            continue
+        
+        return None
+    
+    def _extract_company_metrics(self, rag_results: List[Dict], metric: str, year: str) -> Dict[str, float]:
+        """Extract metrics for all companies in the given year from RAG results.
+        
+        Args:
+            rag_results: Raw RAG results with full text
+            metric: Type of metric to extract
+            year: Year to filter by
+            
+        Returns:
+            Dictionary mapping company to metric value
+        """
+        company_metrics = {}
+        
+        # Get unique companies from rag results
+        companies = set()
+        for result in rag_results:
+            if 'results' not in result:
+                continue
+            for item in result.get('results', []):
+                metadata = item.get('metadata', {})
+                if metadata.get('year') == year:
+                    companies.add(metadata.get('company', 'Unknown'))
+        
+        for company in companies:
+            if company == 'Unknown':
+                continue
+                
+            value = self._extract_metric_from_rag_results(rag_results, metric, company, year)
+            if value is not None:
+                company_metrics[company] = value
+            else:
+                # Fallback to demo data if no extraction possible
+                demo_value = self.demo_financial_data.get(company, {}).get(year, {}).get(metric)
+                if demo_value is not None:
+                    company_metrics[company] = demo_value
+                    self.logger.warning(f"Using fallback demo data for {company} {year} {metric}: {demo_value}")
+        
+        return company_metrics
+    
     def synthesize_comparative_results(self, query: str, sub_queries: List[str], 
                                      rag_results: List[Dict], query_type: str = "comparative") -> SynthesisResult:
         """Synthesize results for comparative queries.
@@ -134,14 +305,17 @@ class SynthesisEngine:
             elif "percentage" in query_lower or ("cloud" in query_lower and "revenue" in query_lower) or ("data center" in query_lower and "revenue" in query_lower):
                 return self._synthesize_segment_analysis(query, sub_queries, sources)
             elif "operating margin" in query_lower:
-                return self._synthesize_operating_margin_comparison(query, sub_queries, sources)
-            elif "revenue" in query_lower and len(re.findall(r'\b(20\d{2})\b', query)) == 1:
-                # Basic metrics for a single year
-                return self._synthesize_basic_metrics(query, sub_queries, sources)
+                return self._synthesize_operating_margin_comparison(query, sub_queries, rag_results)
+            elif "revenue" in query_lower and ("highest" in query_lower or "compare" in query_lower or "comparison" in query_lower):
+                # Revenue comparison query
+                return self._synthesize_revenue_comparison(query, sub_queries, rag_results)
+            elif "revenue" in query_lower and len(re.findall(r'\b(20\d{2})\b', query)) == 1 and not ("highest" in query_lower or "compare" in query_lower):
+                # Basic metrics for a single year and company
+                return self._synthesize_basic_metrics(query, sub_queries, rag_results)
             elif "revenue" in query_lower:
-                return self._synthesize_revenue_comparison(query, sub_queries, sources)
+                return self._synthesize_revenue_comparison(query, sub_queries, rag_results)
             elif "growth" in query_lower:
-                return self._synthesize_growth_comparison(query, sub_queries, sources)
+                return self._synthesize_growth_comparison(query, sub_queries, rag_results)
             else:
                 return self._synthesize_general_comparison(query, sub_queries, sources)
                 
@@ -178,23 +352,21 @@ class SynthesisEngine:
         return sources
     
     def _synthesize_operating_margin_comparison(self, query: str, sub_queries: List[str], 
-                                              sources: List[SourceInfo]) -> SynthesisResult:
+                                              rag_results: List[Dict]) -> SynthesisResult:
         """Synthesize operating margin comparison results."""
         # Extract year from query
         year_match = re.search(r'\b(20\d{2})\b', query)
         year = year_match.group(1) if year_match else '2023'
         
-        # Use demo data for realistic comparison
-        company_margins = {}
-        for company, years_data in self.demo_financial_data.items():
-            if year in years_data:
-                company_margins[company] = years_data[year]['operating_margin']
+        # Extract operating margins from retrieved content
+        company_margins = self._extract_company_metrics(rag_results, 'operating_margin', year)
         
         if not company_margins:
+            sources = self._extract_sources(rag_results)
             return SynthesisResult(
                 query=query,
                 answer="Unable to determine operating margins for the specified year.",
-                reasoning="No operating margin data found for the requested year.",
+                reasoning="No operating margin data found in the retrieved documents for the requested year.",
                 sub_queries=sub_queries,
                 sources=sources
             )
@@ -235,21 +407,20 @@ class SynthesisEngine:
         )
     
     def _synthesize_revenue_comparison(self, query: str, sub_queries: List[str], 
-                                     sources: List[SourceInfo]) -> SynthesisResult:
+                                     rag_results: List[Dict]) -> SynthesisResult:
         """Synthesize revenue comparison results."""
         year_match = re.search(r'\b(20\d{2})\b', query)
         year = year_match.group(1) if year_match else '2023'
         
-        company_revenues = {}
-        for company, years_data in self.demo_financial_data.items():
-            if year in years_data:
-                company_revenues[company] = years_data[year]['revenue']
+        # Extract revenues from retrieved content
+        company_revenues = self._extract_company_metrics(rag_results, 'revenue', year)
         
         if not company_revenues:
+            sources = self._extract_sources(rag_results)
             return SynthesisResult(
                 query=query,
                 answer="Unable to determine revenue data for the specified year.",
-                reasoning="No revenue data found for the requested year.",
+                reasoning="No revenue data found in the retrieved documents for the requested year.",
                 sub_queries=sub_queries,
                 sources=sources
             )
@@ -283,21 +454,20 @@ class SynthesisEngine:
         )
     
     def _synthesize_growth_comparison(self, query: str, sub_queries: List[str], 
-                                    sources: List[SourceInfo]) -> SynthesisResult:
+                                    rag_results: List[Dict]) -> SynthesisResult:
         """Synthesize growth comparison results."""
         year_match = re.search(r'\b(20\d{2})\b', query)
         year = year_match.group(1) if year_match else '2023'
         
-        company_growth = {}
-        for company, years_data in self.demo_financial_data.items():
-            if year in years_data:
-                company_growth[company] = years_data[year]['growth']
+        # Extract growth data from retrieved content
+        company_growth = self._extract_company_metrics(rag_results, 'growth', year)
         
         if not company_growth:
+            sources = self._extract_sources(rag_results)
             return SynthesisResult(
                 query=query,
                 answer="Unable to determine growth data for the specified year.",
-                reasoning="No growth data found for the requested year.",
+                reasoning="No growth data found in the retrieved documents for the requested year.",
                 sub_queries=sub_queries,
                 sources=sources
             )
@@ -358,7 +528,7 @@ class SynthesisEngine:
         )
     
     def _synthesize_basic_metrics(self, query: str, sub_queries: List[str], 
-                                sources: List[SourceInfo]) -> SynthesisResult:
+                                rag_results: List[Dict]) -> SynthesisResult:
         """Synthesize basic metrics results for a single company and year."""
         # Extract company and year from query
         year_match = re.search(r'\b(20\d{2})\b', query)
@@ -372,17 +542,33 @@ class SynthesisEngine:
                 company = ticker
                 break
         
-        if not company or year not in self.demo_financial_data.get(company, {}):
+        if not company:
+            sources = self._extract_sources(rag_results)
             return SynthesisResult(
                 query=query,
-                answer="Unable to find the requested financial data.",
-                reasoning="No data available for the specified company and year.",
+                answer="Unable to identify the company for analysis.",
+                reasoning="Company not recognized in query.",
                 sub_queries=sub_queries,
                 sources=sources
             )
         
-        data = self.demo_financial_data[company][year]
-        revenue = data['revenue']
+        # Try to extract revenue from content first
+        revenue = self._extract_metric_from_rag_results(rag_results, 'revenue', company, year)
+        
+        if revenue is None:
+            # Fallback to demo data
+            demo_data = self.demo_financial_data.get(company, {}).get(year, {})
+            revenue = demo_data.get('revenue')
+            
+            if revenue is None:
+                sources = self._extract_sources(rag_results)
+                return SynthesisResult(
+                    query=query,
+                    answer="Unable to find the requested financial data.",
+                    reasoning="No revenue data available for the specified company and year.",
+                    sub_queries=sub_queries,
+                    sources=sources
+                )
         
         # Generate answer
         company_names = {'MSFT': 'Microsoft', 'GOOGL': 'Google', 'NVDA': 'NVIDIA'}

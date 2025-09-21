@@ -13,10 +13,39 @@ from sec_edgar_scraper import SECEdgarScraper
 def create_mock_filing(company: str, year: int, output_dir: str) -> str:
     """Create a mock 10-K filing for demonstration purposes."""
     
+def create_mock_filing(company: str, year: int, output_dir: str) -> str:
+    """Create a mock 10-K filing for demonstration purposes."""
+    
     # Mock accession number format
     accession_number = f"000{year}012345-{year:02d}-00001"
     
-    # Mock filing content (simplified HTML structure)
+    # Mock financial data that can be extracted by the synthesis engine
+    financial_data = {
+        'MSFT': {
+            2022: {'operating_margin': 41.5, 'revenue': 198.3, 'growth': 18.0, 'cloud_revenue': 91.2},
+            2023: {'operating_margin': 42.1, 'revenue': 211.9, 'growth': 7.2, 'cloud_revenue': 111.6},
+            2024: {'operating_margin': 43.0, 'revenue': 245.0, 'growth': 15.6, 'cloud_revenue': 135.0}
+        },
+        'GOOGL': {
+            2022: {'operating_margin': 23.8, 'revenue': 282.8, 'growth': 10.6, 'cloud_revenue': 26.3},
+            2023: {'operating_margin': 25.2, 'revenue': 307.4, 'growth': 8.7, 'cloud_revenue': 33.1},
+            2024: {'operating_margin': 26.1, 'revenue': 334.7, 'growth': 8.9, 'cloud_revenue': 38.5}
+        },
+        'NVDA': {
+            2022: {'operating_margin': 15.3, 'revenue': 27.0, 'growth': 0.8, 'datacenter_revenue': 15.0},
+            2023: {'operating_margin': 32.1, 'revenue': 60.9, 'growth': 126.0, 'datacenter_revenue': 47.5},
+            2024: {'operating_margin': 35.5, 'revenue': 79.8, 'growth': 31.0, 'datacenter_revenue': 64.2}
+        }
+    }
+    
+    data = financial_data.get(company, {}).get(year, {})
+    operating_margin = data.get('operating_margin', 'N/A')
+    revenue = data.get('revenue', 'N/A')
+    growth = data.get('growth', 'N/A')
+    cloud_revenue = data.get('cloud_revenue', 'N/A')
+    datacenter_revenue = data.get('datacenter_revenue', 'N/A')
+    
+    # Mock filing content with realistic financial data
     mock_content = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -40,19 +69,30 @@ def create_mock_filing(company: str, year: int, output_dir: str) -> str:
     <div class="business-section">
         <h2>PART I</h2>
         <h3>Item 1. Business</h3>
-        <p>This is a mock 10-K filing for demonstration purposes. In a real filing, this would contain detailed business information, financial statements, and regulatory disclosures.</p>
+        <p>This section contains business overview and operations for {company}.</p>
         
         <h3>Item 1A. Risk Factors</h3>
-        <p>Mock risk factors would be listed here...</p>
+        <p>Key business risks and market factors affecting operations.</p>
         
         <h3>Item 2. Properties</h3>
-        <p>Property information would be detailed here...</p>
+        <p>Information about corporate facilities and properties.</p>
     </div>
     
     <div class="financial-section">
         <h2>PART II</h2>
         <h3>Item 8. Financial Statements and Supplementary Data</h3>
-        <p>Financial statements and notes would appear here in a real filing...</p>
+        <h4>Consolidated Statements of Income</h4>
+        <p>For the fiscal year ended June 30, {year}:</p>
+        <p><strong>Total Revenue:</strong> ${revenue} billion</p>
+        <p><strong>Revenue Growth:</strong> {growth}% year-over-year</p>
+        <p><strong>Operating Margin:</strong> {operating_margin}%</p>
+        
+        {f'<p><strong>Cloud Services Revenue:</strong> ${cloud_revenue} billion</p>' if cloud_revenue != 'N/A' else ''}
+        {f'<p><strong>Data Center Revenue:</strong> ${datacenter_revenue} billion</p>' if datacenter_revenue != 'N/A' else ''}
+        
+        <h4>Management Discussion and Analysis</h4>
+        <p>During fiscal {year}, the company achieved total revenue of ${revenue} billion with an operating margin of {operating_margin}%.</p>
+        <p>Year-over-year revenue growth was {growth}%, reflecting strong business performance.</p>
     </div>
     
     <div class="footer">
