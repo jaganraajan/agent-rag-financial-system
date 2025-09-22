@@ -90,7 +90,7 @@ class QueryDecomposer:
         query = state['original_query'].lower()
 
         # Patterns for new query types
-        yoy_patterns = [r"year[- ]?over[- ]?year", r"yoy", r"growth from", r"growth rate"]
+        yoy_patterns = [r"year[- ]?over[- ]?year", r"yoy", r"growth from", r"growth rate", r"change from", r"change"]
         segment_patterns = [r"segment analysis", r"business segment", r"revenue by segment", r"division", r"category"]
         ai_patterns = [r"ai risks", r"ai strategy", r"ai investment", r"artificial intelligence", r"machine learning"]
 
@@ -161,11 +161,13 @@ class QueryDecomposer:
                     sub_queries.append(sub_query)
 
         elif state['query_type'] == "yoy_comparison":
-            # Year-over-year comparison: generate queries for each year for the company/metric
-            if state['companies'] and state['financial_metric'] and len(state['years']) >= 2:
-                company = state['companies'][0]
-                for year in sorted(state['years']):
-                    sub_queries.append(f"{company} {state['financial_metric']} {year}")
+            # Year-over-year comparison: generate queries for each company and year
+            companies = state['companies'] if state['companies'] else ['MSFT', 'GOOGL', 'NVDA']
+            years = sorted(state['years']) if state['years'] else ['2022', '2023', '2024']
+            if companies and state['financial_metric'] and len(years) >= 2:
+                for company in companies:
+                    for year in years:
+                        sub_queries.append(f"{company} {state['financial_metric']} {year}")
             else:
                 sub_queries.append(state['original_query'])
 
