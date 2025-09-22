@@ -2,6 +2,8 @@
 
 A comprehensive financial analysis system that combines **Enhanced RAG (Retrieval-Augmented Generation)** capabilities with **LangGraph query decomposition** and a web scraper for SEC EDGAR 10-K filings. The system processes SEC filings, creates searchable vector embeddings, and provides intelligent answers to complex financial questions about Google, Microsoft, and NVIDIA using their recent 10-K filings.
 
+> **Note:** The file `script_output.txt` contains sample outputs for various query types, including comparative, multi-company, and temporal analyses. Refer to this file for example results and expected answer formats.
+
 ## 🚀 New Features with LangGraph Integration
 
 ### 🧠 Query Decomposition
@@ -330,26 +332,11 @@ The scraper uses the official SEC EDGAR API:
 - Malformed SEC responses
 - File system errors
 
-## Development
-
-### Testing
-
-Run comprehensive system tests:
-```bash
-python test_rag_system.py
-```
-
-Run basic scraper tests:
-```bash
-python test_scraper.py
-```
-
 ### Demo Mode
 
 For testing without internet access:
 ```bash
-python demo_scraper.py  # Generate demo files
-python main.py rag --process --input-dir demo_filings  # Process them
+python main.py rag --process --input-dir filings  # Process them
 python main.py rag  # Interactive query mode
 ```
 
@@ -395,16 +382,6 @@ scraper = SECEdgarScraper(user_agent="Your App 1.0")
 # Download filings
 files = scraper.scrape_company_10k_filings("GOOGL", [2023, 2024], "output_dir")
 ```
-
-## Future Enhancements
-
-- **Enhanced Question Answering**: Integration with large language models for natural language responses
-- **Advanced Analytics**: Financial ratio calculations and trend analysis
-- **More Document Types**: Support for 10-Q, 8-K, and other SEC filings
-- **Real-time Updates**: Automatic fetching of new filings
-- **Web Interface**: Browser-based query interface
-- **Multi-modal Search**: Charts, tables, and text-based retrieval
-- **Comparative Analysis**: Cross-company financial comparisons
 
 ## Performance Notes
 
