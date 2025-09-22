@@ -87,42 +87,38 @@ The web scraper satisfies the following data scope requirements:
 - **MSFT (Microsoft Corporation)**: 789019
 - **NVDA (NVIDIA Corporation)**: 1045810
 
-## Installation
 
-1. Clone the repository:
+## Installation & Setup
+
+### 1. Clone the repository
 ```bash
 git clone https://github.com/jaganraajan/agent-rag-financial-system.git
 cd agent-rag-financial-system
 ```
 
-2. Install dependencies:
+### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-3. (Optional) Set up Azure OpenAI credentials for production embeddings:
+### 3. (Optional) Set up Azure OpenAI credentials
 ```bash
 export AZURE_OPENAI_ENDPOINT="your-endpoint"
 export AZURE_OPENAI_API_KEY="your-api-key"
 ```
 
-## Usage
+---
 
-### 🚀 Quick Start - RAG Pipeline
+## RAG Pipeline Usage
 
-#### 1. Generate Demo Files
-```bash
-python demo_scraper.py
-```
-
-#### 2. Process Documents
+### Process Documents
 ```bash
 python main.py rag --process --input-dir demo_filings
 ```
 
-#### 3. Query the System
+### Query the System
 ```bash
-# Enhanced comparative queries (new!)
+# Enhanced comparative queries
 python main.py rag --query "Which company had the highest operating margin in 2023?"
 
 # Multi-company comparisons
@@ -135,7 +131,7 @@ python main.py rag --query "What are NVIDIA's main risk factors?"
 python main.py rag
 ```
 
-#### 🆕 Enhanced Query Examples
+### More Query Examples
 ```bash
 # Operating margin comparison
 python main.py rag --query "Which company had the highest operating margin in 2023?"
@@ -143,21 +139,23 @@ python main.py rag --query "Which company had the highest operating margin in 20
 # Revenue analysis
 python main.py rag --query "Compare MSFT and GOOGL revenue in 2022"
 
-# Growth analysis  
+# Growth analysis
 python main.py rag --query "What was NVIDIA's growth rate from 2022 to 2023?"
 
 # Force basic mode (without LangGraph features)
 python main.py rag --basic --query "Your question"
 ```
 
-### 📊 SEC Scraper Mode
+---
 
-#### Download All Filings
+## SEC EDGAR Scraper Usage
+
+### Download All Filings
 ```bash
 python main.py scrape
 ```
 
-#### Custom Downloads
+### Custom Downloads
 ```bash
 # Download specific companies
 python main.py scrape --companies GOOGL MSFT --years 2023 2024
@@ -169,18 +167,59 @@ python main.py scrape --output-dir my_filings
 python main.py scrape --user-agent "My Analysis Tool 1.0"
 ```
 
-### 🔧 RAG Pipeline Examples
+---
 
+## ChromaDB Inspector UI (Chunk/Embedding Browser)
+
+### 1. Start the UI server
 ```bash
-# Process real downloaded filings
-python main.py rag --process --input-dir filings
-
-# Query with custom parameters
-python main.py rag --query "NVIDIA revenue growth" --top-k 3
-
-# Use custom vector store location
-python main.py rag --vector-store ./my_vector_db --process
+python chromadb_ui.py
 ```
+
+### 2. Open your browser
+Navigate to: [http://localhost:8080](http://localhost:8080)
+
+#### Features
+- Dashboard: Collection stats, token distribution, content breakdown
+- Browse Chunks: Filter and inspect chunk metadata/content
+- Semantic Search: Query chunks with similarity scoring
+
+#### API Endpoints
+- `GET /api/stats` - Collection statistics
+- `GET /api/chunks` - List all chunks (with optional filtering)
+- `GET /api/search` - Semantic search
+
+---
+
+## Typical Workflow
+
+1. **Download filings** (optional, for real data):
+  ```bash
+  python main.py scrape
+  ```
+2. **Process filings into vector DB:**
+  ```bash
+  python main.py rag --process --input-dir filings
+  ```
+3. **Query the system:**
+  ```bash
+  python main.py rag --query "Your financial question"
+  ```
+4. **Inspect chunks/embeddings:**
+  ```bash
+  python chromadb_ui.py
+  # Then open http://localhost:8080
+  ```
+
+---
+
+## Troubleshooting
+
+- If you see errors about missing filings, check your scrape parameters and output directory.
+- For UI issues, ensure chromadb_ui.py is running and your browser is pointed to the correct port.
+- For Azure OpenAI, ensure your credentials are set as environment variables.
+
+---
 
 ## File Structure
 
@@ -190,9 +229,6 @@ agent-rag-financial-system/
 ├── requirements.txt             # Python dependencies (includes LangGraph)
 ├── .gitignore                  # Git ignore rules
 ├── main.py                     # Main CLI interface (enhanced + basic modes)
-├── sec_edgar_scraper.py        # SEC EDGAR scraper implementation  
-├── rag_pipeline.py             # Original RAG pipeline components
-├── demo_scraper.py            # Demo/mock version for testing
 ├── src/                       # Organized source code structure
 │   ├── agents/                # LangGraph agents and enhanced RAG
 │   │   ├── query_decomposer.py     # Query decomposition with LangGraph
@@ -214,7 +250,7 @@ agent-rag-financial-system/
 
 ### Example File Contents
 ```
-demo_filings/
+filings/
 ├── GOOGL_10K_2022_[accession].htm
 ├── GOOGL_10K_2023_[accession].htm
 ├── GOOGL_10K_2024_[accession].htm

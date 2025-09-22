@@ -46,6 +46,7 @@ data/
 filings/
 downloads/
 demo_filings/
+filings2/
 
 # Vector database
 vector_db/

@@ -1,0 +1,529 @@
+SEC EDGAR Financial RAG System
+
+Query 1: What was NVIDIA's total revenue in fiscal year 2024?
+============================================================
+2025-09-21 21:50:39,546 - INFO - Processing enhanced query: What was NVIDIA's total revenue in fiscal year 2024?
+2025-09-21 21:50:39,550 - INFO - Query type: simple, Needs comparison: False
+2025-09-21 21:50:39,551 - INFO - Extracted - Companies: ['NVDA'], Years: ['2024'], Metric: revenue
+2025-09-21 21:50:39,551 - INFO - Generated 1 sub-queries
+2025-09-21 21:50:39,551 - INFO - Executing 1 sub-queries
+2025-09-21 21:50:40,527 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:50:41,426 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+
+📋 Enhanced Query Result (JSON):
+========================================
+{
+  "query": "What was NVIDIA's total revenue in fiscal year 2024?",
+  "answer": "NVIDIA's total revenue in fiscal year 2024 was $60,922 million.",
+  "reasoning": "Retrieved information from 5 document sections using 1 targeted searches.",
+  "sub_queries": [
+    "NVDA revenue 2024"
+  ],
+  "sources": [
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Based on advances in technology and usage rate, we increased the estimated useful life of a majority of the server, storage, and network equipment from three years to a range of four to five years, an...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Compute & NetworkingGraphicsAll OtherConsolidated(In millions)Year Ended Jan 28, 2024:Revenue$47,405$13,517$\u2014$60,922Operating income (loss)$32,016$5,846$(4,890)$32,972Year Ended Jan 29, 2023:Revenue$1...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "China represented a mid-single digit percentage of our Data Center revenue in the fourth quarter of fiscal year 2024 due to USG licensing requirements and we expect China to be in a similar range in t...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "The increase primarily reflected growth in self-driving platforms. Gross margin increased in fiscal year 2024, primarily driven by Data Center revenue growth and lower net inventory provisions as a pe...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "| Compute & Networking | | Graphics | | All Other | | Consolidated | (In millions) Year Ended Jan 28, 2024: | | | | | | | Revenue | $ | 47,405 | | | $ | 13,517 | | | $ | \u2014 | | | $ | 60,922 | Operating...",
+      "page": 10
+    }
+  ]
+}
+
+Query 2: What percentage of Google's 2023 revenue came from advertising?
+============================================================
+2025-09-21 21:52:02,658 - INFO - Processing enhanced query: What percentage of Google's 2023 revenue came from advertising?
+2025-09-21 21:52:02,662 - INFO - Query type: simple, Needs comparison: False
+2025-09-21 21:52:02,663 - INFO - Extracted - Companies: ['GOOGL'], Years: ['2023'], Metric: revenue
+2025-09-21 21:52:02,663 - INFO - Generated 1 sub-queries
+2025-09-21 21:52:02,663 - INFO - Executing 1 sub-queries
+2025-09-21 21:52:03,607 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:52:04,997 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+
+📋 Enhanced Query Result (JSON):
+========================================
+{
+  "query": "What percentage of Google's 2023 revenue came from advertising?",
+  "answer": "In 2023, Google's revenue from advertising, represented by Google Services, was $272,543 million, which constitutes approximately 89.8% of their total revenue.",
+  "reasoning": "Retrieved information from 5 document sections using 1 targeted searches.",
+  "sub_queries": [
+    "GOOGL revenue 2023"
+  ],
+  "sources": [
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "| Year Ended December 31, | 2021 | | 2022 | | 2023 Revenues: | | | | | Google Services | $ | 237,529 | | | $ | 253,528 | | | $ | 272,543 | Google Cloud | 19,206 | | | 26,280 | | | 33,088 | Other Bets ...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "| | | Year Ended December 31, | | | 2022 | | 2023 Operating income (loss): | | | | | Google Services | | | $ | 82,699 | | | $ | 95,858 | Google Cloud | | | (1,922) | | | 1,716 | Other Bets | | | (4,63...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "The effect of this change was a reduction in depreciation expense of $3.9 billion for the year ended December 31, 2023, recognized primarily in cost of revenues and R&D expenses. For additional inform...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2023",
+      "excerpt": "| Year Ended December 31, | 2020 | | 2021 | | 2022 Revenues: | | | | | Google Services | $ | 168,635 | | | $ | 237,529 | | | $ | 253,528 | Google Cloud | 13,059 | | | 19,206 | | | 26,280 | Other Bets ...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2023",
+      "excerpt": "| | | Year Ended December 31, | | | 2021 | | 2022 Operating income (loss): | | | | | Google Services | | | $ | 91,855 | | | $ | 86,572 | Google Cloud | | | (3,099) | | | (2,968) | Other Bets | | | (5,...",
+      "page": 10
+    }
+  ]
+}
+
+Query 3: How much did Microsoft's cloud revenue grow from 2022 to 2023?
+============================================================
+2025-09-21 21:53:03,037 - INFO - Processing enhanced query: How much did Microsoft's cloud revenue grow from 2022 to 2023?
+2025-09-21 21:53:03,041 - INFO - Query type: simple, Needs comparison: False
+2025-09-21 21:53:03,042 - INFO - Extracted - Companies: ['MSFT'], Years: ['2023', '2022'], Metric: revenue
+2025-09-21 21:53:03,042 - INFO - Generated 1 sub-queries
+2025-09-21 21:53:03,042 - INFO - Executing 1 sub-queries
+2025-09-21 21:53:04,114 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:53:05,278 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+
+📋 Enhanced Query Result (JSON):
+========================================
+{
+  "query": "How much did Microsoft's cloud revenue grow from 2022 to 2023?",
+  "answer": "Microsoft's cloud revenue grew by 22% from $91.2 billion in fiscal year 2022 to $111.6 billion in fiscal year 2023.",
+  "reasoning": "Retrieved information from 5 document sections using 1 targeted searches.",
+  "sub_queries": [
+    "MSFT revenue 2023"
+  ],
+  "sources": [
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Highlights from fiscal year 2023 compared with fiscal year 2022 included: \u2022Microsoft Cloud revenue increased 22% to $111.6 billion. \u2022Office Commercial products and cloud services revenue increased 10%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2024",
+      "excerpt": "Highlights from fiscal year 2024 compared with fiscal year 2023 included: \u2022Microsoft Cloud revenue increased 23% to $137.4 billion. \u2022Office Commercial products and cloud services revenue increased 14%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "Microsoft is a technology company whose mission is to empower every person and every organization on the planet to achieve more. We strive to create local opportunity, growth, and impact in every coun...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Windows OEM revenue decreased 25% as elevated channel inventory levels continued to drive additional weakness beyond declining PC demand. Windows Commercial products and cloud services revenue increas...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "| \u2022 | Microsoft Cloud (formerly commercial cloud) revenue increased 32% to $91.2 billion.",
+      "page": 10
+    }
+  ]
+}
+
+Query 4: Which of the three companies had the highest gross margin in 2023?
+============================================================
+2025-09-21 21:53:41,606 - INFO - Processing enhanced query: Which of the three companies had the highest gross margin in 2023?
+2025-09-21 21:53:41,610 - INFO - Query type: comparative, Needs comparison: True
+2025-09-21 21:53:41,611 - INFO - Extracted - Companies: ['GOOGL', 'NVDA', 'MSFT'], Years: ['2023'], Metric: None
+2025-09-21 21:53:41,611 - INFO - Generated 3 sub-queries
+2025-09-21 21:53:41,611 - INFO - Executing 3 sub-queries
+2025-09-21 21:53:42,547 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:53:42,760 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:53:42,967 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:53:44,307 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:53:45,417 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:53:46,546 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:53:48,080 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+
+📋 Enhanced Query Result (JSON):
+========================================
+{
+  "query": "Which of the three companies had the highest gross margin in 2023?",
+  "answer": "In 2023, Alphabet (GOOGL) had a gross margin of approximately 35.2% from Google Services and 5.1% from Google Cloud. NVIDIA (NVDA) achieved a gross margin of about 37.0%. Microsoft (MSFT) reported a gross margin of around 30% from its cloud and Office products. Therefore, NVIDIA had the highest gross margin among the three companies in 2023.",
+  "reasoning": "Synthesized comparative answer using LLM from 3 sub-query answers.",
+  "sub_queries": [
+    "GOOGL financial performance 2023",
+    "NVDA financial performance 2023",
+    "MSFT financial performance 2023"
+  ],
+  "sources": [
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "| | | Year Ended December 31, | | | 2022 | | 2023 Operating income (loss): | | | | | Google Services | | | $ | 82,699 | | | $ | 95,858 | Google Cloud | | | (1,922) | | | 1,716 | Other Bets | | | (4,63...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "For the year ended December 31, 2023, Alphabet-level activities include charges related to the reduction in force and our office space optimization efforts totaling $3.9 billion. In addition, for the ...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2023",
+      "excerpt": "| | | Year Ended December 31, | | | 2021 | | 2022 Operating income (loss): | | | | | Google Services | | | $ | 91,855 | | | $ | 86,572 | Google Cloud | | | (3,099) | | | (2,968) | Other Bets | | | (5,...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "The effect of this change was a reduction in depreciation expense of $3.9 billion for the year ended December 31, 2023, recognized primarily in cost of revenues and R&D expenses. For additional inform...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "| Year Ended December 31, | 2021 | | 2022 | | 2023 Revenues: | | | | | Google Services | $ | 237,529 | | | $ | 253,528 | | | $ | 272,543 | Google Cloud | 19,206 | | | 26,280 | | | 33,088 | Other Bets ...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2023",
+      "excerpt": "Total return is based on historical results and is not intended to indicate future performance. *$100 invested on 1/28/18 in stock and in indices, including reinvestment of dividends. Source: FactSet ...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2023",
+      "excerpt": "We also own and lease facilities for data centers, research and development, and/or sales and administrative purposes throughout the U.S. and in various international locations, primarily in China, In...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Based on advances in technology and usage rate, we increased the estimated useful life of a majority of the server, storage, and network equipment from three years to a range of four to five years, an...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2023",
+      "excerpt": "Table of ContentsNVIDIA CORPORATION AND SUBSIDIARIESNOTES TO THE CONSOLIDATED FINANCIAL STATEMENTS(Continued) Fair Value atPricing CategoryJanuary 29, 2023January 30, 2022(In millions)AssetsCash equiv...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Compute & NetworkingGraphicsAll OtherConsolidated(In millions)Year Ended Jan 28, 2024:Revenue$47,405$13,517$\u2014$60,922Operating income (loss)$32,016$5,846$(4,890)$32,972Year Ended Jan 29, 2023:Revenue$1...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Highlights from fiscal year 2023 compared with fiscal year 2022 included: \u2022Microsoft Cloud revenue increased 22% to $111.6 billion. \u2022Office Commercial products and cloud services revenue increased 10%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Document and Entity Information - USD ($)$ / shares in Units, $ in Trillions | 12 Months Ended | Jun. 30, 2023 | Jul. 24, 2023 | Dec. 31, 2022 -------------------------------------------------- Docume...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2024",
+      "excerpt": "Highlights from fiscal year 2024 compared with fiscal year 2023 included: \u2022Microsoft Cloud revenue increased 23% to $137.4 billion. \u2022Office Commercial products and cloud services revenue increased 14%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2024",
+      "excerpt": "Document and Entity Information - USD ($)$ / shares in Units, $ in Trillions | 12 Months Ended | Jun. 30, 2024 | Jul. 25, 2024 | Dec. 31, 2023 -------------------------------------------------- Docume...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "Microsoft is a technology company whose mission is to empower every person and every organization on the planet to achieve more. We strive to create local opportunity, growth, and impact in every coun...",
+      "page": 10
+    }
+  ]
+}
+
+Query 5: Compare the R&D spending as a percentage of revenue across all three companies in 2023
+============================================================
+2025-09-21 21:54:44,763 - INFO - Processing enhanced query: Compare the R&D spending as a percentage of revenue across all three companies in 2023
+2025-09-21 21:54:44,767 - INFO - Query type: comparative, Needs comparison: True
+2025-09-21 21:54:44,767 - INFO - Extracted - Companies: ['NVDA', 'MSFT', 'GOOGL'], Years: ['2023'], Metric: revenue
+2025-09-21 21:54:44,768 - INFO - Generated 3 sub-queries
+2025-09-21 21:54:44,768 - INFO - Executing 3 sub-queries
+2025-09-21 21:54:45,562 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:54:45,752 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:54:45,932 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:54:47,010 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:54:48,149 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:54:49,858 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:54:51,236 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+
+📋 Enhanced Query Result (JSON):
+========================================
+{
+  "query": "Compare the R&D spending as a percentage of revenue across all three companies in 2023",
+  "answer": "In 2023, NVIDIA's revenue was $211.9 billion, Microsoft had a total revenue of approximately $111.6 billion, and Alphabet (GOOGL) reported a total revenue of about $305.6 billion. To compare R&D spending as a percentage of revenue, we would need the specific R&D expenditure figures for each company. Without those values, we cannot provide a precise percentage comparison.",
+  "reasoning": "Synthesized comparative answer using LLM from 3 sub-query answers.",
+  "sub_queries": [
+    "NVDA revenue 2023",
+    "MSFT revenue 2023",
+    "GOOGL revenue 2023"
+  ],
+  "sources": [
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Based on advances in technology and usage rate, we increased the estimated useful life of a majority of the server, storage, and network equipment from three years to a range of four to five years, an...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Compute & NetworkingGraphicsAll OtherConsolidated(In millions)Year Ended Jan 28, 2024:Revenue$47,405$13,517$\u2014$60,922Operating income (loss)$32,016$5,846$(4,890)$32,972Year Ended Jan 29, 2023:Revenue$1...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2023",
+      "excerpt": "During the third quarter of fiscal year 2023, the USG announced new license requirements that, with certain exceptions, impact exports to China (including Hong Kong and Macau) and Russia of our A100 a...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2022",
+      "excerpt": "As the COVID-19 pandemic continues, the timing and overall demand from customers, the availability of supply chain, logistical services and component supply, and the impact of rising inflation may hav...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "(In millions, except percentages and per share amounts) | | 2023 | | | 2022 | | | PercentageChange | Revenue | | $ | 211,915 | | | $ | 198,270 | | | | 7% | Gross margin | | | 146,052 | | | | 135,620 |...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Highlights from fiscal year 2023 compared with fiscal year 2022 included: \u2022Microsoft Cloud revenue increased 22% to $111.6 billion. \u2022Office Commercial products and cloud services revenue increased 10%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2024",
+      "excerpt": "Highlights from fiscal year 2024 compared with fiscal year 2023 included: \u2022Microsoft Cloud revenue increased 23% to $137.4 billion. \u2022Office Commercial products and cloud services revenue increased 14%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "Microsoft is a technology company whose mission is to empower every person and every organization on the planet to achieve more. We strive to create local opportunity, growth, and impact in every coun...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Windows OEM revenue decreased 25% as elevated channel inventory levels continued to drive additional weakness beyond declining PC demand. Windows Commercial products and cloud services revenue increas...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "| \u2022 | Microsoft Cloud (formerly commercial cloud) revenue increased 32% to $91.2 billion.",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "| Year Ended December 31, | 2021 | | 2022 | | 2023 Revenues: | | | | | Google Services | $ | 237,529 | | | $ | 253,528 | | | $ | 272,543 | Google Cloud | 19,206 | | | 26,280 | | | 33,088 | Other Bets ...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "| | | Year Ended December 31, | | | 2022 | | 2023 Operating income (loss): | | | | | Google Services | | | $ | 82,699 | | | $ | 95,858 | Google Cloud | | | (1,922) | | | 1,716 | Other Bets | | | (4,63...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "The effect of this change was a reduction in depreciation expense of $3.9 billion for the year ended December 31, 2023, recognized primarily in cost of revenues and R&D expenses. For additional inform...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2023",
+      "excerpt": "| Year Ended December 31, | 2020 | | 2021 | | 2022 Revenues: | | | | | Google Services | $ | 168,635 | | | $ | 237,529 | | | $ | 253,528 | Google Cloud | 13,059 | | | 19,206 | | | 26,280 | Other Bets ...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2023",
+      "excerpt": "| | | Year Ended December 31, | | | 2021 | | 2022 Operating income (loss): | | | | | Google Services | | | $ | 91,855 | | | $ | 86,572 | Google Cloud | | | (3,099) | | | (2,968) | Other Bets | | | (5,...",
+      "page": 10
+    }
+  ]
+}
+
+Query 6: How did each company's operating margin change from 2022 to 2024?
+============================================================
+2025-09-21 21:56:08,523 - INFO - Processing enhanced query: How did each company's operating margin change from 2022 to 2024?
+2025-09-21 21:56:08,528 - INFO - Query type: yoy_comparison, Needs comparison: False
+2025-09-21 21:56:08,529 - INFO - Extracted - Companies: [], Years: ['2022', '2024'], Metric: operating margin
+2025-09-21 21:56:08,529 - INFO - Generated 6 sub-queries
+2025-09-21 21:56:08,529 - INFO - Executing 6 sub-queries
+2025-09-21 21:56:09,428 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:09,626 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:09,814 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:10,074 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:10,262 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:10,445 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:11,648 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:12,742 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:13,969 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:15,109 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:16,361 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:17,483 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:56:18,815 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+
+📋 Enhanced Query Result (JSON):
+========================================
+{
+  "query": "How did each company's operating margin change from 2022 to 2024?",
+  "answer": "From 2022 to 2024, the operating margin for GOOGL decreased from approximately 34.5% to an unspecified value in 2024, while NVDA's operating margin improved from an unspecified value in 2022 to approximately 13.4% in 2024. The operating margin for MSFT remains unknown for both years due to lack of specific data.",
+  "reasoning": "Synthesized YoY comparison using LLM from 6 sub-query answers.",
+  "sub_queries": [
+    "MSFT operating margin 2022",
+    "MSFT operating margin 2024",
+    "GOOGL operating margin 2022",
+    "GOOGL operating margin 2024",
+    "NVDA operating margin 2022",
+    "NVDA operating margin 2024"
+  ],
+  "sources": [
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Highlights from fiscal year 2023 compared with fiscal year 2022 included: \u2022Microsoft Cloud revenue increased 22% to $111.6 billion. \u2022Office Commercial products and cloud services revenue increased 10%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Gross margin increased $10.4 billion or 8% driven by growth in Intelligent Cloud and Productivity and Business Processes and the change in accounting estimate, offset in part by a decline in More Pers...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "Windows OEM revenue growthRevenue from sales of Windows Pro and non-Pro licenses sold through the OEM channelWindows Commercial products and cloud services revenue growthRevenue from Windows Commercia...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "SEGMENT RESULTS OF OPERATIONS (In millions, except percentages)20222021PercentageChangeRevenueProductivity and Business Processes$63,364$53,91518%Intelligent Cloud75,25160,08025%More Personal Computin...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "| \u2022 | Microsoft Cloud gross margin percentage decreased slightly to 70%. Excluding the impact of the change in accounting estimate, Microsoft Cloud gross margin percentage increased 3 points driven by...",
+      "page": 10
+    }
+  ]
+}
+
+Query 7: What are the main AI risks mentioned by each company and how do they differ?
+============================================================
+2025-09-21 21:57:08,086 - INFO - Processing enhanced query: What are the main AI risks mentioned by each company and how do they differ?
+2025-09-21 21:57:08,090 - INFO - Query type: ai_strategy, Needs comparison: False
+2025-09-21 21:57:08,091 - INFO - Extracted - Companies: [], Years: ['2023'], Metric: ai
+2025-09-21 21:57:08,091 - INFO - Generated 3 sub-queries
+2025-09-21 21:57:08,091 - INFO - Executing 3 sub-queries
+2025-09-21 21:57:08,917 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:57:09,205 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:57:09,354 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:57:10,593 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:57:12,480 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:57:13,565 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+2025-09-21 21:57:15,214 - INFO - HTTP Request: POST https://jagan-mey88jgy-eastus2.cognitiveservices.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-02-01 "HTTP/1.1 200 OK"
+
+📋 Enhanced Query Result (JSON):
+========================================
+{
+  "query": "What are the main AI risks mentioned by each company and how do they differ?",
+  "answer": "The main AI risks identified by each company reflect their strategic focuses: \n\n- **Microsoft (MSFT)** emphasizes the risk of complexity in IT management as they develop intelligent solutions aimed at enhancing productivity and collaboration.\n- **Alphabet (GOOGL)** highlights the risks associated with safety and responsibility in AI, given their commitment to advanced model development and rigorous testing.\n- **NVIDIA (NVDA)** points to risks in centralized AI compute platforms, particularly regarding their application in diverse industries like automotive and visual effects.\n\nOverall, while Microsoft is concerned with IT management complexities, Alphabet prioritizes safety and responsibility, and NVIDIA focuses on the risks of centralized computing in various sectors.",
+  "reasoning": "Synthesized AI strategy comparison using LLM from 3 sub-query answers.",
+  "sub_queries": [
+    "MSFT ai strategy 2023",
+    "GOOGL ai strategy 2023",
+    "NVDA ai strategy 2023"
+  ],
+  "sources": [
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "In fiscal year 2023, we collaborated with partners and worked within neighborhoods and communities to launch and scale a number of projects and programs, including: \u2022Working with 103 unique organizati...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "We undertake no obligation to update or revise publicly any forward-looking statements, whether because of new information, future events, or otherwise. Microsoft is a technology company whose mission...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2024",
+      "excerpt": "We undertake no obligation to update or revise publicly any forward-looking statements, whether because of new information, future events, or otherwise. Microsoft is a technology company committed to ...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "MICROSOFT CORPORATION For the Fiscal Year Ended June 30, 2022 PagePART IItem 1.Business3Information about our Executive Officers21Item 1A.Risk Factors23Item 1B.Unresolved Staff Comments37Item 2.Proper...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "We continue to develop complete, intelligent solutions for our customers that empower people to be productive and collaborate, while safeguarding businesses and simplifying IT management. Our goal is ...",
+      "page": 10
+    }
+  ]
+}
