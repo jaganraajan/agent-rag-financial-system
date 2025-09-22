@@ -22,6 +22,63 @@ from src.agents.synthesis_engine import SynthesisEngine
 
 
 class EnhancedRAGPipeline:
+    def _synthesize_cross_company_comparison(self, query: str, sub_queries: List[str], rag_results: List[Dict]):
+        """Synthesize cross-company comparison using LLM from sub-query answers."""
+        from src.agents.synthesis_engine import SynthesisResult, SourceInfo
+
+        # Get answers for each sub-query using _synthesize_simple_query
+        sub_answers = []
+        all_sources = []
+        for i, sub_query in enumerate(sub_queries):
+            sub_result = rag_results[i] if i < len(rag_results) else {}
+            simple_result = self._synthesize_simple_query(sub_query, [sub_query], [sub_result])
+            sub_answers.append(f"{sub_query}: {simple_result.answer}")
+            all_sources.extend(simple_result.sources)
+
+        # Prepare prompt for LLM
+        prompt = (
+            f"You are a financial analyst assistant. "
+            f"Given the following answers to sub-queries about different companies, create a concise comparative answer for the user's main question. "
+            f"If you find specific values, include them in a 1-2 line answer.\n\n"
+            f"Main Question: {query}\n\n"
+            f"Sub-query Answers:\n" + "\n".join(sub_answers)
+        )
+
+        # Call Azure OpenAI
+        try:
+            from openai import AzureOpenAI
+            import os
+            azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+            api_key = os.getenv('AZURE_OPENAI_API_KEY')
+            api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-01')
+            model = os.getenv('AZURE_OPENAI_MODEL', 'gpt-4o-mini')
+            client = AzureOpenAI(
+                azure_endpoint=azure_endpoint,
+                api_key=api_key,
+                api_version=api_version
+            )
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a financial analyst assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                max_tokens=256
+            )
+            answer = response.choices[0].message.content.strip()
+        except Exception as e:
+            answer = f"LLM call failed: {e}. Falling back to concatenated sub-query answers.\n" + "\n".join(sub_answers)
+
+        reasoning = f"Synthesized comparative answer using LLM from {len(sub_queries)} sub-query answers."
+
+        return SynthesisResult(
+            query=query,
+            answer=answer,
+            reasoning=reasoning,
+            sub_queries=sub_queries,
+            sources=all_sources,  # Limit to top 5 sources
+        )
     """Enhanced RAG Pipeline with LangGraph query decomposition and synthesis."""
     
     def __init__(self, vector_store_path: str = "./vector_db", use_openai: bool = False):
@@ -84,8 +141,8 @@ class EnhancedRAGPipeline:
             
             # Step 3: Synthesis
             if decomposition_result['needs_comparison'] or decomposition_result['query_type'] == 'comparative':
-                synthesis_result = self.synthesis_engine.synthesize_comparative_results(
-                    question, sub_queries, rag_results, decomposition_result['query_type']
+                synthesis_result = self._synthesize_cross_company_comparison(
+                    question, sub_queries, rag_results
                 )
             else:
                 # For non-comparative queries, use simpler synthesis
