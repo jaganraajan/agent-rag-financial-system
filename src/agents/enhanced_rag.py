@@ -22,6 +22,171 @@ from src.agents.synthesis_engine import SynthesisEngine
 
 
 class EnhancedRAGPipeline:
+    def _synthesize_yoy_comparison(self, query: str, sub_queries: List[str], rag_results: List[Dict]):
+        """Synthesize year-over-year comparison using LLM from sub-query answers."""
+        from src.agents.synthesis_engine import SynthesisResult, SourceInfo
+
+        sub_answers = []
+        all_sources = []
+        for i, sub_query in enumerate(sub_queries):
+            sub_result = rag_results[i] if i < len(rag_results) else {}
+            simple_result = self._synthesize_simple_query(sub_query, [sub_query], [sub_result])
+            sub_answers.append(f"{sub_query}: {simple_result.answer}")
+            all_sources.extend(simple_result.sources)
+
+        prompt = (
+            f"You are a financial analyst assistant. "
+            f"Given the following answers to sub-queries about year-over-year financial metrics, create a concise answer for the user's main question. "
+            f"If you find specific values or growth rates, include them in a 1-2 line answer.\n\n"
+            f"Main Question: {query}\n\n"
+            f"Sub-query Answers:\n" + "\n".join(sub_answers)
+        )
+
+        try:
+            from openai import AzureOpenAI
+            import os
+            azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+            api_key = os.getenv('AZURE_OPENAI_API_KEY')
+            api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-01')
+            model = os.getenv('AZURE_OPENAI_MODEL', 'gpt-4o-mini')
+            client = AzureOpenAI(
+                azure_endpoint=azure_endpoint,
+                api_key=api_key,
+                api_version=api_version
+            )
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a financial analyst assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                max_tokens=256
+            )
+            answer = response.choices[0].message.content.strip()
+        except Exception as e:
+            answer = f"LLM call failed: {e}. Falling back to concatenated sub-query answers.\n" + "\n".join(sub_answers)
+
+        reasoning = f"Synthesized YoY comparison using LLM from {len(sub_queries)} sub-query answers."
+
+        return SynthesisResult(
+            query=query,
+            answer=answer,
+            reasoning=reasoning,
+            sub_queries=sub_queries,
+            sources=all_sources[:5],
+        )
+
+    def _synthesize_segment_analysis(self, query: str, sub_queries: List[str], rag_results: List[Dict]):
+        """Synthesize segment analysis using LLM from sub-query answers."""
+        from src.agents.synthesis_engine import SynthesisResult, SourceInfo
+
+        sub_answers = []
+        all_sources = []
+        for i, sub_query in enumerate(sub_queries):
+            sub_result = rag_results[i] if i < len(rag_results) else {}
+            simple_result = self._synthesize_simple_query(sub_query, [sub_query], [sub_result])
+            sub_answers.append(f"{sub_query}: {simple_result.answer}")
+            all_sources.extend(simple_result.sources)
+
+        prompt = (
+            f"You are a financial analyst assistant. "
+            f"Given the following answers to sub-queries about financial segments, create a concise answer for the user's main question. "
+            f"If you find specific values or percentages, include them in a 1-2 line answer.\n\n"
+            f"Main Question: {query}\n\n"
+            f"Sub-query Answers:\n" + "\n".join(sub_answers)
+        )
+
+        try:
+            from openai import AzureOpenAI
+            import os
+            azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+            api_key = os.getenv('AZURE_OPENAI_API_KEY')
+            api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-01')
+            model = os.getenv('AZURE_OPENAI_MODEL', 'gpt-4o-mini')
+            client = AzureOpenAI(
+                azure_endpoint=azure_endpoint,
+                api_key=api_key,
+                api_version=api_version
+            )
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a financial analyst assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                max_tokens=256
+            )
+            answer = response.choices[0].message.content.strip()
+        except Exception as e:
+            answer = f"LLM call failed: {e}. Falling back to concatenated sub-query answers.\n" + "\n".join(sub_answers)
+
+        reasoning = f"Synthesized segment analysis using LLM from {len(sub_queries)} sub-query answers."
+
+        return SynthesisResult(
+            query=query,
+            answer=answer,
+            reasoning=reasoning,
+            sub_queries=sub_queries,
+            sources=all_sources[:5],
+        )
+
+    def _synthesize_ai_strategy(self, query: str, sub_queries: List[str], rag_results: List[Dict]):
+        """Synthesize AI strategy comparison using LLM from sub-query answers."""
+        from src.agents.synthesis_engine import SynthesisResult, SourceInfo
+
+        sub_answers = []
+        all_sources = []
+        for i, sub_query in enumerate(sub_queries):
+            sub_result = rag_results[i] if i < len(rag_results) else {}
+            simple_result = self._synthesize_simple_query(sub_query, [sub_query], [sub_result])
+            sub_answers.append(f"{sub_query}: {simple_result.answer}")
+            all_sources.extend(simple_result.sources)
+
+        prompt = (
+            f"You are a financial analyst assistant. "
+            f"Given the following answers to sub-queries about AI investments and strategy, create a concise comparative answer for the user's main question. "
+            f"If you find specific values or investment amounts, include them in a 1-2 line answer.\n\n"
+            f"Main Question: {query}\n\n"
+            f"Sub-query Answers:\n" + "\n".join(sub_answers)
+        )
+
+        try:
+            from openai import AzureOpenAI
+            import os
+            azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+            api_key = os.getenv('AZURE_OPENAI_API_KEY')
+            api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-01')
+            model = os.getenv('AZURE_OPENAI_MODEL', 'gpt-4o-mini')
+            client = AzureOpenAI(
+                azure_endpoint=azure_endpoint,
+                api_key=api_key,
+                api_version=api_version
+            )
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a financial analyst assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                max_tokens=256
+            )
+            answer = response.choices[0].message.content.strip()
+        except Exception as e:
+            answer = f"LLM call failed: {e}. Falling back to concatenated sub-query answers.\n" + "\n".join(sub_answers)
+
+        reasoning = f"Synthesized AI strategy comparison using LLM from {len(sub_queries)} sub-query answers."
+
+        return SynthesisResult(
+            query=query,
+            answer=answer,
+            reasoning=reasoning,
+            sub_queries=sub_queries,
+            sources=all_sources[:5],
+        )
+    
     def _synthesize_cross_company_comparison(self, query: str, sub_queries: List[str], rag_results: List[Dict]):
         """Synthesize cross-company comparison using LLM from sub-query answers."""
         from src.agents.synthesis_engine import SynthesisResult, SourceInfo
@@ -140,12 +305,24 @@ class EnhancedRAGPipeline:
                 self.logger.debug(f"Sub-query '{sub_query}' returned {len(sub_result.get('results', []))} results")
             
             # Step 3: Synthesis
-            if decomposition_result['needs_comparison'] or decomposition_result['query_type'] == 'comparative':
+            query_type = decomposition_result['query_type']
+            if query_type == 'comparative':
                 synthesis_result = self._synthesize_cross_company_comparison(
                     question, sub_queries, rag_results
                 )
+            elif query_type == 'yoy_comparison':
+                synthesis_result = self._synthesize_yoy_comparison(
+                    question, sub_queries, rag_results
+                )
+            elif query_type == 'segment_analysis':
+                synthesis_result = self._synthesize_segment_analysis(
+                    question, sub_queries, rag_results
+                )
+            elif query_type == 'ai_strategy':
+                synthesis_result = self._synthesize_ai_strategy(
+                    question, sub_queries, rag_results
+                )
             else:
-                # For non-comparative queries, use simpler synthesis
                 synthesis_result = self._synthesize_simple_query(question, sub_queries, rag_results)
             
             # Step 4: Format output
@@ -211,7 +388,7 @@ class EnhancedRAGPipeline:
             context_chunks = "\n\n".join([s.excerpt for s in sources[:5]])
             prompt = (
                 f"You are a financial analyst assistant. "
-                f"Given the following SEC filing excerpts, answer the user's question as precisely as possible. "
+                f"Given the following SEC filing excerpts, answer in 1-2 lines the user's question as precisely as possible. "
                 f"If you find a specific value, include it in your answer.\n\n"
                 f"Question: {query}\n\n"
                 f"SEC Filing Excerpts:\n{context_chunks}"

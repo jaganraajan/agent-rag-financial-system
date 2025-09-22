@@ -50,10 +50,13 @@ class QueryDecomposer:
             'googl': 'GOOGL'
         }
         
-        # Financial metrics patterns (simplified for two query types)
+        # Financial metrics patterns (expanded for new query types)
         self.financial_metrics = {
             'operating margin': ['operating margin', 'operating income margin'],
-            'revenue': ['revenue', 'total revenue', 'net revenue', 'sales']
+            'revenue': ['revenue', 'total revenue', 'net revenue', 'sales'],
+            'growth': ['growth', 'growth rate', 'yoy', 'year-over-year'],
+            'segment': ['segment', 'business segment', 'division', 'category'],
+            'ai': ['ai', 'artificial intelligence', 'machine learning', 'ai investment', 'ai strategy']
         }
         
         # Initialize LangGraph workflow
@@ -83,25 +86,33 @@ class QueryDecomposer:
         return workflow.compile()
     
     def _analyze_query(self, state: Dict) -> Dict:
-        """Analyze the query type and complexity."""
+        """Analyze the query type and complexity, including new query types."""
         query = state['original_query'].lower()
-        
-        # Detect comparative questions (cross-company comparisons)
+
+        # Patterns for new query types
+        yoy_patterns = [r"year[- ]?over[- ]?year", r"yoy", r"growth from", r"growth rate"]
+        segment_patterns = [r"segment analysis", r"business segment", r"revenue by segment", r"division", r"category"]
+        ai_patterns = [r"ai risks", r"ai strategy", r"ai investment", r"artificial intelligence", r"machine learning"]
+
         comparative_patterns = [
             r'\b(highest|lowest|best|worst|top|bottom|most|least|compare|versus|vs)\b',
             r'\bwhich\s+(company|organization)\b',
             r'\b(more|less|greater|smaller)\s+than\b'
         ]
-        
-        state['needs_comparison'] = any(re.search(pattern, query) for pattern in comparative_patterns)
-        
-        # Determine query type based on patterns
-        if state['needs_comparison']:
+
+        if any(re.search(pattern, query) for pattern in yoy_patterns):
+            state['query_type'] = "yoy_comparison"
+        elif any(re.search(pattern, query) for pattern in segment_patterns):
+            state['query_type'] = "segment_analysis"
+        elif any(re.search(pattern, query) for pattern in ai_patterns):
+            state['query_type'] = "ai_strategy"
+        elif any(re.search(pattern, query) for pattern in comparative_patterns):
             state['query_type'] = "comparative"
+            state['needs_comparison'] = True
         else:
-            # Simple/basic metrics query for a single company
             state['query_type'] = "simple"
-        
+            state['needs_comparison'] = False
+
         self.logger.info(f"Query type: {state['query_type']}, Needs comparison: {state['needs_comparison']}")
         return state
     
@@ -136,11 +147,10 @@ class QueryDecomposer:
         return state
     
     def _generate_subqueries(self, state: Dict) -> Dict:
-        """Generate sub-queries based on the analysis."""
+        """Generate sub-queries for all supported query types."""
         sub_queries = []
-        
+
         if state['query_type'] == "comparative":
-            # Cross-Company comparison: Generate individual queries for each company
             companies = state['companies'] if state['companies'] else ['MSFT', 'GOOGL', 'NVDA']
             for company in companies:
                 for year in state['years']:
@@ -149,7 +159,32 @@ class QueryDecomposer:
                     else:
                         sub_query = f"{company} financial performance {year}"
                     sub_queries.append(sub_query)
-        
+
+        elif state['query_type'] == "yoy_comparison":
+            # Year-over-year comparison: generate queries for each year for the company/metric
+            if state['companies'] and state['financial_metric'] and len(state['years']) >= 2:
+                company = state['companies'][0]
+                for year in sorted(state['years']):
+                    sub_queries.append(f"{company} {state['financial_metric']} {year}")
+            else:
+                sub_queries.append(state['original_query'])
+
+        elif state['query_type'] == "segment_analysis":
+            # Segment analysis: generate queries for each segment if possible
+            if state['companies'] and state['financial_metric']:
+                company = state['companies'][0]
+                year = state['years'][0] if state['years'] else '2023'
+                sub_queries.append(f"{company} segment analysis {year}")
+            else:
+                sub_queries.append(state['original_query'])
+
+        elif state['query_type'] == "ai_strategy":
+            # AI strategy: generate queries for each company/year
+            companies = state['companies'] if state['companies'] else ['MSFT', 'GOOGL', 'NVDA']
+            year = state['years'][0] if state['years'] else '2023'
+            for company in companies:
+                sub_queries.append(f"{company} ai strategy {year}")
+
         else:
             # Simple/Basic metrics query - use as-is or enhance slightly
             if state['companies'] and state['financial_metric']:
@@ -158,7 +193,7 @@ class QueryDecomposer:
                 sub_queries.append(f"{company} {state['financial_metric']} {year}")
             else:
                 sub_queries.append(state['original_query'])
-        
+
         state['sub_queries'] = sub_queries
         self.logger.info(f"Generated {len(sub_queries)} sub-queries")
         return state
