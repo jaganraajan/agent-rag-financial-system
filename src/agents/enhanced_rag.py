@@ -9,7 +9,7 @@ multi-step retrieval, and synthesis capabilities using LangGraph.
 import sys
 import os
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 from pathlib import Path
 import json
 
@@ -246,12 +246,14 @@ class EnhancedRAGPipeline:
         )
     """Enhanced RAG Pipeline with LangGraph query decomposition and synthesis."""
     
-    def __init__(self, vector_store_path: str = "./vector_db", use_openai: bool = False):
+    def __init__(self, vector_store_path: str = "./vector_db", use_openai: bool = False, 
+                 llm_classifier: Optional[Callable[[str], str]] = None):
         """Initialize the enhanced RAG pipeline.
         
         Args:
             vector_store_path: Path to the vector database
             use_openai: Whether to use OpenAI API for enhanced capabilities
+            llm_classifier: Optional custom LLM classifier function for query classification
         """
         self.logger = logging.getLogger(__name__)
         
@@ -259,7 +261,7 @@ class EnhancedRAGPipeline:
         self.base_rag = BaseRAGPipeline(vector_store_path)
         
         # Initialize LangGraph components
-        self.query_decomposer = QueryDecomposer(use_openai=use_openai)
+        self.query_decomposer = QueryDecomposer(use_openai=use_openai, llm_classifier=llm_classifier)
         self.synthesis_engine = SynthesisEngine()
         
         self.logger.info("Enhanced RAG Pipeline with LangGraph initialized")
