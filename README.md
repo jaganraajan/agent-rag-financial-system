@@ -332,6 +332,73 @@ The scraper uses the official SEC EDGAR API:
 - Malformed SEC responses
 - File system errors
 
+### Hybrid Query Classification
+
+The query decomposition pipeline supports **hybrid classification** with intelligent fallback:
+
+#### Default: Regex-Based Classification
+By default, queries are classified using regex pattern matching for backward compatibility:
+```python
+from src.agents.query_decomposer import QueryDecomposer
+
+# Default regex-only mode
+decomposer = QueryDecomposer()
+result = decomposer.decompose_query("Which company had highest revenue?")
+# Uses regex patterns to determine query_type
+```
+
+#### Optional: LLM-Based Classification
+
+Enable LLM classification for more intelligent query analysis:
+
+**Option 1: Azure OpenAI (requires credentials)**
+```python
+# Set environment variables first:
+# export AZURE_OPENAI_ENDPOINT="your-endpoint"
+# export AZURE_OPENAI_API_KEY="your-api-key"
+# export AZURE_OPENAI_API_VERSION="2024-02-01"
+# export AZURE_OPENAI_MODEL="gpt-4o-mini"
+
+decomposer = QueryDecomposer(use_openai=True)
+result = decomposer.decompose_query("Compare Microsoft and Google")
+# Attempts LLM classification first, falls back to regex on error
+```
+
+**Option 2: Custom LLM Classifier (no network required)**
+```python
+# Define your own classifier function
+def my_classifier(query: str) -> str:
+    # Your classification logic
+    if "compare" in query.lower():
+        return "comparative"
+    return "simple"
+
+decomposer = QueryDecomposer(llm_classifier=my_classifier)
+result = decomposer.decompose_query("Compare companies")
+# Uses your custom classifier, falls back to regex on error
+```
+
+**Using with EnhancedRAGPipeline:**
+```python
+from src.agents.enhanced_rag import EnhancedRAGPipeline
+
+# With Azure OpenAI
+pipeline = EnhancedRAGPipeline(use_openai=True)
+
+# With custom classifier
+pipeline = EnhancedRAGPipeline(llm_classifier=my_classifier)
+
+# Default (regex-only)
+pipeline = EnhancedRAGPipeline()
+```
+
+#### Classification Features
+- **Allowed Query Types**: `yoy_comparison`, `segment_analysis`, `ai_strategy`, `comparative`, `simple`
+- **Strict Validation**: LLM output must exactly match allowed types
+- **Automatic Fallback**: Falls back to regex if LLM fails or returns invalid label
+- **Clear Logging**: Logs indicate which classification method was used
+- **Zero Breaking Changes**: Default behavior unchanged
+
 ### Demo Mode
 
 For testing without internet access:

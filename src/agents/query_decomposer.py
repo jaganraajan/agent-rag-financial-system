@@ -8,7 +8,7 @@ into simpler sub-queries that can be executed against the RAG system.
 
 import logging
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -27,17 +27,24 @@ class QueryState:
     error: Optional[str] = None
 
 
+# Allowed query types for classification
+ALLOWED_QUERY_TYPES = {"yoy_comparison", "segment_analysis", "ai_strategy", "comparative", "simple"}
+
+
 class QueryDecomposer:
     """LangGraph-powered query decomposer for financial questions."""
     
-    def __init__(self, use_openai: bool = False):
+    def __init__(self, use_openai: bool = False, llm_classifier: Optional[Callable[[str], str]] = None):
         """Initialize the query decomposer.
         
         Args:
-            use_openai: Whether to use OpenAI API (requires credentials)
+            use_openai: Whether to use OpenAI API for classification (requires credentials)
+            llm_classifier: Optional custom LLM classifier function that takes a query string
+                          and returns a classification label
         """
         self.logger = logging.getLogger(__name__)
         self.use_openai = use_openai
+        self.llm_classifier = llm_classifier
         
         # Company mapping for common variations
         self.company_mapping = {
@@ -85,10 +92,114 @@ class QueryDecomposer:
         
         return workflow.compile()
     
+    def _classify_with_llm(self, query: str) -> Optional[str]:
+        """Classify query using LLM (custom or Azure OpenAI).
+        
+        Args:
+            query: The original query string
+            
+        Returns:
+            Classification label if successful and valid, None otherwise
+        """
+        # Try custom classifier first
+        if self.llm_classifier is not None:
+            try:
+                self.logger.info("Attempting classification with custom LLM classifier")
+                result = self.llm_classifier(query)
+                if result:
+                    label = result.strip().lower()
+                    if label in ALLOWED_QUERY_TYPES:
+                        self.logger.info(f"Custom LLM classifier returned: {label}")
+                        return label
+                    else:
+                        self.logger.warning(f"Custom LLM classifier returned invalid label: {label}")
+                        return None
+            except Exception as e:
+                self.logger.error(f"Custom LLM classifier failed: {e}")
+                return None
+        
+        # Try Azure OpenAI if use_openai is enabled
+        elif self.use_openai:
+            try:
+                import os
+                from openai import AzureOpenAI
+                
+                self.logger.info("Attempting classification with Azure OpenAI")
+                
+                # Check for required environment variables
+                azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+                api_key = os.getenv('AZURE_OPENAI_API_KEY')
+                
+                if not azure_endpoint or not api_key:
+                    self.logger.warning("Azure OpenAI credentials not found in environment")
+                    return None
+                
+                api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2024-02-01')
+                model = os.getenv('AZURE_OPENAI_MODEL', 'gpt-4o-mini')
+                
+                # Initialize Azure OpenAI client
+                client = AzureOpenAI(
+                    azure_endpoint=azure_endpoint,
+                    api_key=api_key,
+                    api_version=api_version
+                )
+                
+                # Call the model with strict classification prompt
+                system_prompt = (
+                    "You are a classifier. Classify the user query into one of: "
+                    "yoy_comparison, segment_analysis, ai_strategy, comparative, simple. "
+                    "Respond with only the label."
+                )
+                
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": query}
+                    ],
+                    temperature=0.0,
+                    max_tokens=5
+                )
+                
+                result = response.choices[0].message.content.strip().lower()
+                
+                # Validate the result
+                if result in ALLOWED_QUERY_TYPES:
+                    self.logger.info(f"Azure OpenAI classification: {result}")
+                    return result
+                else:
+                    self.logger.warning(f"Azure OpenAI returned invalid label: {result}")
+                    return None
+                    
+            except Exception as e:
+                self.logger.error(f"Azure OpenAI classification failed: {e}")
+                return None
+        
+        return None
+    
     def _analyze_query(self, state: Dict) -> Dict:
         """Analyze the query type and complexity, including new query types."""
-        query = state['original_query'].lower()
-
+        original_query = state['original_query']
+        query = original_query.lower()
+        
+        # Attempt LLM classification first if enabled
+        llm_label = None
+        if self.llm_classifier is not None or self.use_openai:
+            llm_label = self._classify_with_llm(original_query)
+        
+        # If LLM classification succeeded, use it
+        if llm_label is not None and llm_label in ALLOWED_QUERY_TYPES:
+            state['query_type'] = llm_label
+            state['needs_comparison'] = (llm_label == "comparative")
+            self.logger.info(f"Using LLM classification - Query type: {state['query_type']}, Needs comparison: {state['needs_comparison']}")
+            return state
+        
+        # Fallback to regex-based classification
+        if llm_label is not None:
+            self.logger.info("LLM classification attempted but invalid, falling back to regex")
+        elif self.llm_classifier is not None or self.use_openai:
+            self.logger.info("LLM classification failed, falling back to regex")
+        
         # Patterns for new query types
         yoy_patterns = [r"year[- ]?over[- ]?year", r"yoy", r"growth from", r"growth rate", r"change from", r"change"]
         segment_patterns = [r"segment analysis", r"business segment", r"revenue by segment", r"division", r"category"]
@@ -113,7 +224,7 @@ class QueryDecomposer:
             state['query_type'] = "simple"
             state['needs_comparison'] = False
 
-        self.logger.info(f"Query type: {state['query_type']}, Needs comparison: {state['needs_comparison']}")
+        self.logger.info(f"Using regex classification - Query type: {state['query_type']}, Needs comparison: {state['needs_comparison']}")
         return state
     
     def _extract_entities(self, state: Dict) -> Dict:
@@ -269,6 +380,9 @@ class QueryDecomposer:
 
 def test_query_decomposer():
     """Test function for the query decomposer."""
+    print("=" * 70)
+    print("TEST 1: Default Mode (Regex-only classification)")
+    print("=" * 70)
     decomposer = QueryDecomposer()
     
     test_queries = [
@@ -284,6 +398,53 @@ def test_query_decomposer():
         print(f"Type: {result['query_type']}")
         print(f"Companies: {result['companies']}")
         print(f"Sub-queries: {result['sub_queries']}")
+    
+    print("\n" + "=" * 70)
+    print("TEST 2: Custom LLM Classifier Mode (Local, no network)")
+    print("=" * 70)
+    
+    # Custom classifier that always returns "comparative"
+    def custom_classifier(query: str) -> str:
+        return "comparative"
+    
+    decomposer_with_llm = QueryDecomposer(use_openai=False, llm_classifier=custom_classifier)
+    
+    # Test that custom classifier is used
+    test_query = "Tell me about Apple's financial performance"
+    print(f"\nQuery: {test_query}")
+    print("(Expected: custom classifier should classify as 'comparative')")
+    result = decomposer_with_llm.decompose_query(test_query)
+    print(f"Type: {result['query_type']}")
+    print(f"Companies: {result['companies']}")
+    print(f"Sub-queries: {result['sub_queries']}")
+    
+    print("\n" + "=" * 70)
+    print("TEST 3: Custom LLM Classifier with various labels")
+    print("=" * 70)
+    
+    # Test different query type labels
+    test_cases = [
+        ("What is Microsoft's revenue?", "simple"),
+        ("Compare companies", "comparative"),
+        ("Year over year growth", "yoy_comparison"),
+        ("Segment analysis for NVDA", "segment_analysis"),
+        ("AI strategy investments", "ai_strategy"),
+    ]
+    
+    for query_text, expected_label in test_cases:
+        decomposer_test = QueryDecomposer(
+            use_openai=False, 
+            llm_classifier=lambda q: expected_label
+        )
+        print(f"\nQuery: {query_text}")
+        print(f"Custom classifier returns: {expected_label}")
+        result = decomposer_test.decompose_query(query_text)
+        print(f"Actual type: {result['query_type']}")
+        assert result['query_type'] == expected_label, f"Expected {expected_label}, got {result['query_type']}"
+    
+    print("\n" + "=" * 70)
+    print("All tests passed!")
+    print("=" * 70)
 
 
 if __name__ == "__main__":
