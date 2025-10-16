@@ -9,6 +9,7 @@ multi-step retrieval, and synthesis capabilities using LangGraph.
 import sys
 import os
 import logging
+import re
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import json
@@ -264,6 +265,42 @@ class EnhancedRAGPipeline:
         
         self.logger.info("Enhanced RAG Pipeline with LangGraph initialized")
     
+    def _detect_compound_query_with_followup(self, query: str) -> bool:
+        """Detect if query has both comparative and follow-up clauses with pronoun references.
+        
+        Returns True if the query contains:
+        1. A comparative clause (e.g., "highest X in Y")
+        2. A follow-up clause with pronoun reference (e.g., "that company")
+        3. AI-related intent (ai risks/ai strategy)
+        """
+        query_lower = query.lower()
+        
+        # Check for comparative patterns
+        comparative_patterns = [
+            r'\b(highest|lowest|best|worst|top|bottom|most|least)\b',
+            r'\bwhich\s+(company|organization)\b'
+        ]
+        has_comparative = any(re.search(pattern, query_lower) for pattern in comparative_patterns)
+        
+        # Check for follow-up with pronoun reference
+        followup_patterns = [
+            r'\bthat\s+(company|organization)\b',
+            r'\bthe\s+(company|organization)\b',
+            r'\bit\b'
+        ]
+        has_followup_pronoun = any(re.search(pattern, query_lower) for pattern in followup_patterns)
+        
+        # Check for AI-related intent
+        ai_patterns = [r'ai\s+(risks?|strategy|strategies|investment)']
+        has_ai_intent = any(re.search(pattern, query_lower) for pattern in ai_patterns)
+        
+        return has_comparative and has_followup_pronoun and has_ai_intent
+    
+    def _extract_year_from_query(self, query: str) -> str:
+        """Extract year from query, defaulting to 2024."""
+        year_match = re.search(r'\b(20\d{2})\b', query)
+        return year_match.group(1) if year_match else '2024'
+    
     def process_directory(self, filings_dir: str) -> Dict:
         """Process directory using the base RAG pipeline."""
         return self.base_rag.process_directory(filings_dir)
@@ -286,6 +323,9 @@ class EnhancedRAGPipeline:
         try:
             self.logger.info(f"Processing enhanced query: {question}")
             
+            # Check for compound query with follow-up
+            is_compound = self._detect_compound_query_with_followup(question)
+            
             # Step 1: Query Decomposition
             decomposition_result = self.query_decomposer.decompose_query(question)
             
@@ -294,7 +334,7 @@ class EnhancedRAGPipeline:
                 # Fallback to basic RAG
                 return self._fallback_query(question, top_k, return_json)
             
-            # Step 2: Multi-step Retrieval
+            # Step 2: Multi-step Retrieval (initial sub-queries)
             sub_queries = decomposition_result['sub_queries']
             self.logger.info(f"Executing {len(sub_queries)} sub-queries")
             
@@ -304,7 +344,7 @@ class EnhancedRAGPipeline:
                 rag_results.append(sub_result)
                 self.logger.debug(f"Sub-query '{sub_query}' returned {len(sub_result.get('results', []))} results")
             
-            # Step 3: Synthesis
+            # Step 3: Synthesis (initial synthesis)
             query_type = decomposition_result['query_type']
             if query_type == 'comparative':
                 synthesis_result = self._synthesize_cross_company_comparison(
@@ -325,7 +365,30 @@ class EnhancedRAGPipeline:
             else:
                 synthesis_result = self._synthesize_simple_query(question, sub_queries, rag_results)
             
-            # Step 4: Format output
+            # Step 4: Iterative follow-up for compound queries
+            if is_compound and synthesis_result.metadata and 'winner_company' in synthesis_result.metadata:
+                winner = synthesis_result.metadata['winner_company']
+                year = self._extract_year_from_query(question)
+                
+                self.logger.info(f"Detected compound query with winner: {winner}, appending follow-up sub-query")
+                
+                # Generate follow-up sub-query: "{WINNER} ai strategy {year}"
+                followup_query = f"{winner} ai strategy {year}"
+                self.logger.info(f"Follow-up sub-query: {followup_query}")
+                
+                # Execute follow-up retrieval
+                followup_result = self.base_rag.query(followup_query, top_k)
+                
+                # Append to executed sub_queries and results
+                synthesis_result.sub_queries.append(followup_query)
+                rag_results.append(followup_result)
+                
+                # Re-synthesize with combined results using _synthesize_ai_strategy
+                synthesis_result = self._synthesize_ai_strategy(
+                    question, synthesis_result.sub_queries, rag_results
+                )
+            
+            # Step 5: Format output
             if return_json:
                 return self.synthesis_engine.format_json_output(synthesis_result)
             else:

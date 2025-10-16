@@ -32,6 +32,7 @@ class SynthesisResult:
     reasoning: str
     sub_queries: List[str]
     sources: List[SourceInfo]
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class SynthesisEngine:
@@ -299,7 +300,8 @@ class SynthesisEngine:
             answer=answer,
             reasoning=reasoning,
             sub_queries=sub_queries,
-            sources=relevant_sources
+            sources=relevant_sources,
+            metadata={'winner_company': highest_company, 'year': year}
         )
     
     def format_json_output(self, synthesis_result: SynthesisResult) -> Dict[str, Any]:
