@@ -100,15 +100,17 @@ class QueryDecomposer:
             r'\b(more|less|greater|smaller)\s+than\b'
         ]
 
-        if any(re.search(pattern, query) for pattern in yoy_patterns):
+        # Prioritize comparative over other types for compound queries
+        # This allows iterative follow-up logic to work correctly
+        if any(re.search(pattern, query) for pattern in comparative_patterns):
+            state['query_type'] = "comparative"
+            state['needs_comparison'] = True
+        elif any(re.search(pattern, query) for pattern in yoy_patterns):
             state['query_type'] = "yoy_comparison"
         elif any(re.search(pattern, query) for pattern in segment_patterns):
             state['query_type'] = "segment_analysis"
         elif any(re.search(pattern, query) for pattern in ai_patterns):
             state['query_type'] = "ai_strategy"
-        elif any(re.search(pattern, query) for pattern in comparative_patterns):
-            state['query_type'] = "comparative"
-            state['needs_comparison'] = True
         else:
             state['query_type'] = "simple"
             state['needs_comparison'] = False
