@@ -238,12 +238,34 @@ class EnhancedRAGPipeline:
 
         reasoning = f"Synthesized comparative answer using LLM from {len(sub_queries)} sub-query answers."
 
+        # Extract winner company from sources for compound query support
+        winner_company = None
+        year = self._extract_year_from_query(query)
+        
+        # Try to determine winner by finding company with highest metric
+        if all_sources:
+            # Group sources by company and extract values
+            company_values = {}
+            for source in all_sources:
+                if source.year == year and source.company not in company_values:
+                    # Try to extract numeric value from excerpt
+                    import re
+                    # Look for revenue patterns like "$123.4 billion"
+                    match = re.search(r'\$(\d+\.?\d*)\s*billion', source.excerpt.lower())
+                    if match:
+                        company_values[source.company] = float(match.group(1))
+            
+            # Find company with highest value
+            if company_values:
+                winner_company = max(company_values, key=company_values.get)
+
         return SynthesisResult(
             query=query,
             answer=answer,
             reasoning=reasoning,
             sub_queries=sub_queries,
             sources=all_sources,  # Limit to top 5 sources
+            metadata={'winner_company': winner_company, 'year': year} if winner_company else None
         )
     """Enhanced RAG Pipeline with LangGraph query decomposition and synthesis."""
     
