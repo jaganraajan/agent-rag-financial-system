@@ -13,7 +13,8 @@ import argparse
 import logging
 import json
 from datetime import datetime
-from sec_edgar_scraper import SECEdgarScraper
+from compound_query_planner import CompoundQueryPlanner
+from src.scrapers.sec_edgar_scraper import SECEdgarScraper
 
 # Try to import enhanced RAG, fall back to basic if not available
 try:
@@ -136,26 +137,65 @@ def run_rag_mode(args):
             # Single query mode
             print(f"Query: {args.query}")
             print("=" * 60)
-            
+
+            def is_compound_query(query: str) -> bool:
+                """Use Azure OpenAI to classify if a query is compound."""
+                try:
+                    from openai import AzureOpenAI
+                    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+                    azure_api_key = os.getenv("AZURE_OPENAI_API_KEY", "")
+                    azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01")
+                    azure_model = os.getenv("AZURE_OPENAI_MODEL", "gpt-4o-mini")
+                    client = AzureOpenAI(
+                        azure_endpoint=azure_endpoint,
+                        api_key=azure_api_key,
+                        api_version=azure_api_version,
+                    )
+                    messages = [
+                        {
+                            "role": "system",
+                            "content": "You are a financial assistant. Classify the user's query as 'compound' if it contains multiple distinct sub-questions, dependencies, or requires multi-step reasoning. Otherwise, classify as 'simple'. Return STRICT JSON: {\"type\": \"compound\" or \"simple\"}."
+                        },
+                        {
+                            "role": "user",
+                            "content": query
+                        }
+                    ]
+                    resp = client.chat.completions.create(
+                        model=azure_model,
+                        temperature=0.0,
+                        messages=messages,
+                    )
+                    raw = resp.choices[0].message.content or "{}"
+                    import json as _json
+                    result = _json.loads(raw)
+                    return result.get("type", "simple") == "compound"
+                except Exception as e:
+                    print(f"⚠️  Compound query classification failed: {e}. Defaulting to simple.")
+                    return False
+
             if ENHANCED_RAG_AVAILABLE:
-                # Use enhanced query with JSON output
-                result = rag.query(args.query, top_k=args.top_k, return_json=True)
-                
-                print("\n📋 Enhanced Query Result (JSON):")
-                print("=" * 40)
-                print(json.dumps(result, indent=2))
-                
+                # Use Azure OpenAI to classify query type
+                compound = is_compound_query(args.query)
+                if compound:
+                    planner = CompoundQueryPlanner(max_steps=4, top_k=5)
+                    result = planner.run(args.query)
+                    print("\n=== Compound Query Result ===")
+                    print(json.dumps(result, indent=2))
+                else:
+                    result = rag.query(args.query, top_k=args.top_k, return_json=True)
+                    print("\n📋 Enhanced Query Result (JSON):")
+                    print("=" * 40)
+                    print(json.dumps(result, indent=2))
             else:
                 # Use basic query  
+                logging.basicConfig(level=logging.INFO)
                 result = rag.query(args.query, top_k=args.top_k)
-                
                 if 'error' in result:
                     print(f"❌ Error: {result['error']}")
                     return
-                
                 print(f"Found {len(result['results'])} relevant chunks:")
                 print()
-                
                 for i, chunk in enumerate(result['results'], 1):
                     print(f"Result {i} (Similarity: {chunk['similarity']:.3f}):")
                     print(f"Company: {chunk['metadata'].get('company', 'Unknown')}")
