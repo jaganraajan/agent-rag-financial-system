@@ -1,5 +1,141 @@
 SEC EDGAR Financial RAG System
 
+Compound Query 1: Which company had the highest revenue in 2024? What are the main AI risks of that company?
+
+=== Compound Query Result ===
+{
+  "query": "Which company had the highest revenue in 2024? What are the main AI risks of that company?",
+  "answer": "In 2024, Microsoft (MSFT) had the highest revenue, reporting $137.4 billion. In its 2023 10-K, Microsoft identified several main AI risks, including challenges related to data privacy and security, the rapid pace of technological change, and the necessity to comply with evolving regulations. The company also highlighted the importance of addressing ethical considerations in AI deployment to mitigate potential reputational risks.",
+  "reasoning": "We need to identify the company with the highest revenue in 2024 before we can assess its AI risks.The next step is to find the main AI risks associated with Microsoft, which had the highest revenue in 2024.The necessary information about the company with the highest revenue in 2024 (Microsoft) and its AI risks has been obtained.Terminated after 2 step(s).",
+  "sub_queries": [
+    "Which company had the highest revenue in 2024?",
+    "What are the main AI risks of MSFT in its 2023 10-K?"
+  ],
+  "sources": [
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Based on advances in technology and usage rate, we increased the estimated useful life of a majority of the server, storage, and network equipment from three years to a range of four to five years, an...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Compute & NetworkingGraphicsAll OtherConsolidated(In millions)Year Ended Jan 28, 2024:Revenue$47,405$13,517$\u2014$60,922Operating income (loss)$32,016$5,846$(4,890)$32,972Year Ended Jan 29, 2023:Revenue$1...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "China represented a mid-single digit percentage of our Data Center revenue in the fourth quarter of fiscal year 2024 due to USG licensing requirements and we expect China to be in a similar range in t...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "The increase primarily reflected growth in self-driving platforms. Gross margin increased in fiscal year 2024, primarily driven by Data Center revenue growth and lower net inventory provisions as a pe...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2022",
+      "excerpt": "As the COVID-19 pandemic continues, the timing and overall demand from customers, the availability of supply chain, logistical services and component supply, and the impact of rising inflation may hav...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "The effect of this change was a reduction in depreciation expense of $3.9 billion for the year ended December 31, 2023, recognized primarily in cost of revenues and R&D expenses. For additional inform...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2023",
+      "excerpt": "See Note 8 of the Notes to Consolidated Financial Statements included in Item 8 of this Annual Report on Form 10-K for additional information. \u2022On July 15, 2022, the company executed a 20-for-one stoc...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "China represented a mid-single digit percentage of our Data Center revenue in the fourth quarter of fiscal year 2024 due to USG licensing requirements and we expect China to be in a similar range in t...",
+      "page": 10
+    },
+    {
+      "company": "GOOGL",
+      "year": "2024",
+      "excerpt": "For the year ended December 31, 2023, Alphabet-level activities include charges related to the reduction in force and our office space optimization efforts totaling $3.9 billion. In addition, for the ...",
+      "page": 10
+    },
+    {
+      "company": "NVDA",
+      "year": "2024",
+      "excerpt": "Based on advances in technology and usage rate, we increased the estimated useful life of a majority of the server, storage, and network equipment from three years to a range of four to five years, an...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "Highlights from fiscal year 2023 compared with fiscal year 2022 included: \u2022Microsoft Cloud revenue increased 22% to $111.6 billion. \u2022Office Commercial products and cloud services revenue increased 10%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2024",
+      "excerpt": "Highlights from fiscal year 2024 compared with fiscal year 2023 included: \u2022Microsoft Cloud revenue increased 23% to $137.4 billion. \u2022Office Commercial products and cloud services revenue increased 14%...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2024",
+      "excerpt": "SEGMENT RESULTS OF OPERATIONS  Fiscal Year 2024 Compared with Fiscal Year 2023 Productivity and Business Processes Revenue increased $8.5 billion or 12%. \u2022Office Commercial products and cloud services...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "Microsoft is a technology company whose mission is to empower every person and every organization on the planet to achieve more. We strive to create local opportunity, growth, and impact in every coun...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\"> <tr> <td valign=\"top\"> <p> </p></td> <td valign=\"top\"> <p>\u2022</p></td> <td valign=\"top\"> <p>Office Consumer products and cloud services revenue increas...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "In fiscal year 2023, we collaborated with partners and worked within neighborhoods and communities to launch and scale a number of projects and programs, including: \u2022Working with 103 unique organizati...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "We undertake no obligation to update or revise publicly any forward-looking statements, whether because of new information, future events, or otherwise. Microsoft is a technology company whose mission...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2024",
+      "excerpt": "We undertake no obligation to update or revise publicly any forward-looking statements, whether because of new information, future events, or otherwise. Microsoft is a technology company committed to ...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2022",
+      "excerpt": "MICROSOFT CORPORATION For the Fiscal Year Ended June 30, 2022 PagePART IItem 1.Business3Information about our Executive Officers21Item 1A.Risk Factors23Item 1B.Unresolved Staff Comments37Item 2.Proper...",
+      "page": 10
+    },
+    {
+      "company": "MSFT",
+      "year": "2023",
+      "excerpt": "We continue to develop complete, intelligent solutions for our customers that empower people to be productive and collaborate, while safeguarding businesses and simplifying IT management. Our goal is ...",
+      "page": 10
+    }
+  ]
+}
+
+
 Query 1: What was NVIDIA's total revenue in fiscal year 2024?
 ============================================================
 2025-09-21 21:50:39,546 - INFO - Processing enhanced query: What was NVIDIA's total revenue in fiscal year 2024?
