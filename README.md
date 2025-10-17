@@ -11,6 +11,66 @@ A comprehensive financial analysis system that combines **Enhanced RAG (Retrieva
 - **Multi-step Retrieval**: Executes multiple targeted searches for comprehensive answers
 - **Comparative Analysis**: Handles "which company" and comparison questions intelligently
 
+## 🔁 Compound Query Planner (Iterative, LLM-in-the-loop)
+
+The Compound Query Planner handles multi-step questions where later sub-queries depend on facts discovered in earlier steps. It uses Azure OpenAI to plan each step and the Enhanced RAG pipeline to execute sub-queries against SEC filings.
+
+- Why: Decompose chained questions like “Which company had the highest revenue in 2024? What are the main AI risks of that company?” where the second part needs the result of the first.
+- How: Loop of Plan → Execute → Update → Repeat, with Azure OpenAI proposing the next sub-query.
+
+### Quick start
+
+1) Configure Azure OpenAI (environment variables):
+- AZURE_OPENAI_ENDPOINT
+- AZURE_OPENAI_API_KEY
+- AZURE_OPENAI_API_VERSION (default: 2024-02-01)
+- AZURE_OPENAI_MODEL (e.g., gpt-4o-mini)
+
+2) Minimal usage:
+```python
+from src.agents.compound_query_planner import CompoundQueryPlanner
+
+planner = CompoundQueryPlanner(max_steps=4, top_k=5)
+result = planner.run("Which company had the highest revenue in 2024? What are the main AI risks of that company?")
+
+print(result["final_answer"])
+# Inspect intermediate steps:
+for s in result["steps"]:
+    print(s["subquery"], "->", s["answer"][:200])
+```
+
+Notes:
+- Under the hood, each sub-query is executed via EnhancedRAGPipeline.query, and the planner uses prior answers to craft the next sub-query.
+
+### ASCII flow
+
+```
+User Query
+   │
+   ▼
+[Planner LLM]
+   - Propose next_subquery based on original query + previous answers
+   │
+   ▼
+[Execute Sub-query]
+   - EnhancedRAGPipeline.query(next_subquery)
+   - Retrieve chunks + synthesize short answer
+   │
+   ▼
+[Update Context]
+   - Append step answer + sources
+   - Surface discovered entities (e.g., MSFT)
+   │
+   ▼
+[Stop?]
+   ├─ Yes → [Final Synthesis LLM] → Final Answer
+   └─ No  → Loop back to [Planner LLM] with updated context
+```
+
+Example chain:
+- Step 1: “Which company had the highest revenue in 2024?” → Answer mentions MSFT.
+- Step 2: “What are the main AI risks of MSFT?” → Uses MSFT discovered in Step 1.
+
 ### 📊 Enhanced Query Types
 - **Comparative Queries**: "Which company had the highest operating margin in 2023?"
 - **Multi-Company Analysis**: "Compare Microsoft and Google revenue"
