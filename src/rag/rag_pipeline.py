@@ -81,10 +81,25 @@ class TextExtractor:
                 if parent_table and id(parent_table) not in processed_elements:
                     continue  # Skip nested tables, process parent instead
                 
-                # Special handling for financial tables
-                table_text = self._extract_table_text(element)
-                if table_text and len(table_text.strip()) > 50:  # Only significant tables
-                    text_parts.append(f"\n[FINANCIAL_TABLE]\n{table_text}\n[/FINANCIAL_TABLE]\n")
+                # Store the entire table HTML (with tags) for vector store, but strip style and presentational tags
+                table_soup = BeautifulSoup(str(element), 'html.parser')
+
+                # Remove all style attributes from all tags
+                for tag in table_soup.find_all(True):
+                    if 'style' in tag.attrs:
+                        del tag.attrs['style']
+                # Remove all span and div tags but keep their contents
+                for span in table_soup.find_all('span'):
+                    span.unwrap()
+                for div in table_soup.find_all('div'):
+                    div.unwrap()
+                # Remove all <ix:nonfraction ...> tags but keep their contents
+                for ix in table_soup.find_all('ix:nonfraction'):
+                    ix.unwrap()
+
+                table_html = str(table_soup)
+                if table_html:
+                    text_parts.append(f"\n[FINANCIAL_TABLE]\n{table_html}\n[/FINANCIAL_TABLE]\n")
                 processed_elements.add(id(element))
             
             elif element.name in ['p', 'div']:
@@ -116,34 +131,7 @@ class TextExtractor:
                     processed_elements.add(id(element))
         
         return '\n\n'.join(text_parts)
-    
-    def _extract_table_text(self, table) -> str:
-        """Extract structured text from financial tables."""
-        rows = []
-        
-        # Extract table headers
-        headers = []
-        for header in table.find_all(['th']):
-            header_text = header.get_text(strip=True)
-            if header_text:
-                headers.append(header_text)
-        
-        if headers:
-            rows.append(" | ".join(headers))
-            rows.append("-" * 50)  # Separator line
-        
-        # Extract table data
-        for row in table.find_all('tr'):
-            cells = []
-            for cell in row.find_all(['td', 'th']):
-                cell_text = cell.get_text(strip=True)
-                cells.append(cell_text if cell_text else "")
-            
-            if cells and any(cell.strip() for cell in cells):  # Skip empty rows
-                rows.append(" | ".join(cells))
-        
-        return '\n'.join(rows) if rows else ""
-    
+     
     def _extract_list_text(self, list_element) -> str:
         """Extract text from list elements."""
         items = []
